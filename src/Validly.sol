@@ -224,7 +224,7 @@ contract Validly is ISovereignALM, ERC20, ReentrancyGuard {
 
     /**
      * @notice Swap callback from POOL.
-     *     @param _poolInput Contains fundamental data about the swap. 
+     *     @param _poolInput Contains fundamental data about the swap.
      *     @return quote Quote information that prices tokenIn and tokenOut.
      */
     function getLiquidityQuote(
