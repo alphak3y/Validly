@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import { Test } from "forge-std/Test.sol";
-import { Validly } from "../src/Validly.sol";
-import { ValidlyFactory } from "../src/ValidlyFactory.sol";
-import { ERC20Mock } from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { ProtocolFactory } from "@valantis-core/protocol-factory/ProtocolFactory.sol";
-import { ISovereignPool } from "@valantis-core/pools/interfaces/ISovereignPool.sol";
-import { SovereignPoolSwapParams } from "@valantis-core/pools/structs/SovereignPoolStructs.sol";
-import { SovereignPoolFactory } from "@valantis-core/pools/factories/SovereignPoolFactory.sol";
+import {Test} from "forge-std/Test.sol";
+import {Validly} from "../src/Validly.sol";
+import {ValidlyFactory} from "../src/ValidlyFactory.sol";
+import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {ProtocolFactory} from "@valantis-core/protocol-factory/ProtocolFactory.sol";
+import {ISovereignPool} from "@valantis-core/pools/interfaces/ISovereignPool.sol";
+import {SovereignPoolSwapParams} from "@valantis-core/pools/structs/SovereignPoolStructs.sol";
+import {SovereignPoolFactory} from "@valantis-core/pools/factories/SovereignPoolFactory.sol";
 
 contract ValidlyTest is Test {
     ValidlyFactory public factory;
@@ -50,17 +50,19 @@ contract ValidlyTest is Test {
         assertEq(volatilePair.isStable(), false);
         assertEq(stablePair.isStable(), true);
 
-
-        vm.mockCall(address(volatilePool), abi.encodeWithSelector(ISovereignPool.sovereignVault.selector), abi.encode(address(volatilePair)));
+        vm.mockCall(
+            address(volatilePool),
+            abi.encodeWithSelector(ISovereignPool.sovereignVault.selector),
+            abi.encode(address(volatilePair))
+        );
         vm.expectRevert(Validly.Validly__constructor_customSovereignVaultNotAllowed.selector);
         new Validly(address(volatilePool), false);
 
         assertEq(volatilePair.decimals0(), 1e18);
         assertEq(volatilePair.decimals1(), 1e18);
-    }   
+    }
 
     function test_deposit() public {
-
         vm.warp(block.timestamp + 1);
 
         vm.expectRevert(Validly.Validly__deadlineExpired.selector);
@@ -84,10 +86,9 @@ contract ValidlyTest is Test {
 
         vm.expectRevert(Validly.Validly__deposit_zeroShares.selector);
         volatilePair.deposit(1 ether, 0, 0, block.timestamp + 1, address(this));
-    }    
+    }
 
     function test_withdraw() public {
-
         test_deposit();
 
         uint256 shares = volatilePair.balanceOf(address(this));
@@ -116,15 +117,14 @@ contract ValidlyTest is Test {
         vm.expectRevert(Validly.Validly__withdraw_insufficientToken1Withdrawn.selector);
         volatilePair.withdraw(sharesToWithdraw, 0, 100 ether, block.timestamp + 1, address(this));
 
-        (uint256 amount0, uint256 amount1) = volatilePair.withdraw(sharesToWithdraw, 0, 0, block.timestamp + 1, address(this));
+        (uint256 amount0, uint256 amount1) =
+            volatilePair.withdraw(sharesToWithdraw, 0, 0, block.timestamp + 1, address(this));
 
         assertEq(amount0, expectedAmount0);
         assertEq(amount1, expectedAmount1);
     }
 
-
     function test_getLiquidityQuote_stable() public {
-
         token0.mint(address(this), 1000 ether);
         token1.mint(address(this), 1000 ether);
 
@@ -151,7 +151,6 @@ contract ValidlyTest is Test {
     }
 
     function test_getLiquidityQuote_volatile() public {
-
         test_deposit();
 
         SovereignPoolSwapParams memory params;
@@ -174,12 +173,9 @@ contract ValidlyTest is Test {
         uint256 expectedAmountOut = Math.mulDiv(reserve1, amountInUsed, reserve0 + amountInUsed);
 
         assertEq(amountOut, expectedAmountOut);
-
     }
 
-
     function test_onDepositLiquidityCallback() public {
-
         vm.expectRevert(Validly.Validly__onlyPool.selector);
         volatilePair.onDepositLiquidityCallback(0, 0, abi.encode(address(0)));
 
@@ -197,5 +193,4 @@ contract ValidlyTest is Test {
 
         volatilePair.onSwapCallback(true, 1 ether, 1 ether);
     }
-
 }
