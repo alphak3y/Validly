@@ -28,6 +28,7 @@ contract Validly is ISovereignALM, ERC20, ReentrancyGuard {
     error Validly__priceOutOfRange();
     error Validly__constructor_customSovereignVaultNotAllowed();
     error Validly__constructor_invalidPool();
+    error Validly__getLiquidityQuote_feeInBipsZero();
     error Validly__withdraw_AmountZero();
     error Validly__withdraw_insufficientToken0Withdrawn();
     error Validly__withdraw_insufficientToken1Withdrawn();
@@ -240,6 +241,9 @@ contract Validly is ISovereignALM, ERC20, ReentrancyGuard {
         bytes calldata, /*_externalContext*/
         bytes calldata /*_verifierData*/
     ) external view override returns (ALMLiquidityQuote memory quote) {
+        
+        if(_poolInput.feeInBips == 0) revert Validly__getLiquidityQuote_feeInBipsZero();
+        
         (uint256 reserve0, uint256 reserve1) = pool.getReserves();
 
         (uint256 reserveIn, uint256 reserveOut) = _poolInput.isZeroToOne ? (reserve0, reserve1) : (reserve1, reserve0);
