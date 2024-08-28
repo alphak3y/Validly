@@ -58,9 +58,19 @@ contract Validly is ISovereignALM, ERC20, ReentrancyGuard {
      */
     ISovereignPool public immutable pool;
 
+    /**
+     * @dev Boolean indicating if the pool is stable or volatile
+     */
     bool public immutable isStable;
 
+    /**
+     * @dev Decimals of token0  
+     */
     uint256 public immutable decimals0;
+
+    /**
+     * @dev Decimals of token1
+     */
     uint256 public immutable decimals1;
 
     /**

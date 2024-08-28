@@ -19,12 +19,14 @@ contract ValidlyFactory {
      *  IMMUTABLES
      */
 
-    /** @notice The protocol factory contract used for deploying pools
+    /**
+     * @notice The protocol factory contract used for deploying pools
      *  @dev This is set in the constructor and cannot be changed
      */
     IProtocolFactory public immutable protocolFactory;
 
-    /** @notice The fee percentage for the Validly pool
+    /**
+     * @notice The fee percentage for the Validly pool
      *  @dev This is set in the constructor and cannot be changed
      */
     uint256 public immutable feeBips;
@@ -33,7 +35,9 @@ contract ValidlyFactory {
      *  STORAGE
      */
 
-    /** @notice Mapping from pool keys to pool addresses */
+    /**
+     * @notice Mapping from pool keys to pool addresses
+     */
     mapping(bytes32 key => address pool) public pools;
 
     /**
@@ -53,7 +57,8 @@ contract ValidlyFactory {
      *  EXTERNAL FUNCTIONS
      */
 
-    /** @notice Deploys a new Validly pool for a given token pair
+    /**
+     * @notice Deploys a new Validly pool for a given token pair
      *  @dev Tokens are sorted internally to ensure consistent pool keys
      *  @param _token0 The address of the first token in the pair
      *  @param _token1 The address of the second token in the pair
@@ -101,7 +106,8 @@ contract ValidlyFactory {
         return address(validly);
     }
 
-    /** @notice Creates a new Validly pool, mostly for rebase tokens, which is not indexed in pools mapping
+    /**
+     * @notice Creates a new Validly pool, mostly for rebase tokens, which is not indexed in pools mapping
      *  @dev This function is used to create a pool given the SovereignPool constructor arguments
      *  @param _args The constructor arguments for the SovereignPool
      *  @param _isStable Boolean indicating if the pool should be stable or volatile
