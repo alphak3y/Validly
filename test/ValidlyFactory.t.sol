@@ -32,12 +32,12 @@ contract ValidlyFactoryTest is Test {
         protocolFactory.setSovereignPoolFactory(address(poolFactory));
 
         // Create ValidlyFactory
-        factory = new ValidlyFactory(address(protocolFactory), 0);
+        factory = new ValidlyFactory(address(protocolFactory), 1);
     }
 
     function test_constructor() public {
         assertEq(address(factory.protocolFactory()), address(protocolFactory));
-        assertEq(factory.feeBips(), 0);
+        assertEq(factory.feeBips(), 1);
 
         vm.expectRevert(ValidlyFactory.ValidlyFactory__constructor_invalidFeeBips.selector);
 

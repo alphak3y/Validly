@@ -46,7 +46,7 @@ contract ValidlyFactory {
     constructor(address _protocolFactory, uint256 _feeBips) {
         protocolFactory = IProtocolFactory(_protocolFactory);
 
-        if (_feeBips > 10000) {
+        if (_feeBips == 0 || _feeBips > 10000) {
             revert ValidlyFactory__constructor_invalidFeeBips();
         }
 
