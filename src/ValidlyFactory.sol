@@ -8,9 +8,7 @@ import {ISovereignPool} from "@valantis-core/pools/interfaces/ISovereignPool.sol
 
 contract ValidlyFactory {
     /**
-     *
      *  ERRORS
-     *
      */
     error ValidlyFactory__constructor_invalidFeeBips();
     error ValidlyFactory__createPair_failedDeployment();
@@ -18,32 +16,28 @@ contract ValidlyFactory {
     error ValidlyFactory__createPool_failedDeployment();
 
     /**
-     *
      *  IMMUTABLES
-     *
      */
 
-    /// @notice The protocol factory contract used for deploying pools
-    /// @dev This is set in the constructor and cannot be changed
+    /** @notice The protocol factory contract used for deploying pools
+     *  @dev This is set in the constructor and cannot be changed
+     */
     IProtocolFactory public immutable protocolFactory;
 
-    /// @notice The fee percentage for the Validly pool
-    /// @dev This is set in the constructor and cannot be changed
+    /** @notice The fee percentage for the Validly pool
+     *  @dev This is set in the constructor and cannot be changed
+     */
     uint256 public immutable feeBips;
 
     /**
-     *
      *  STORAGE
-     *
      */
 
-    /// @notice Mapping from pool keys to pool addresses
+    /** @notice Mapping from pool keys to pool addresses */
     mapping(bytes32 key => address pool) public pools;
 
     /**
-     *
      *  CONSTRUCTOR
-     *
      */
     constructor(address _protocolFactory, uint256 _feeBips) {
         protocolFactory = IProtocolFactory(_protocolFactory);
@@ -56,18 +50,17 @@ contract ValidlyFactory {
     }
 
     /**
-     *
      *  EXTERNAL FUNCTIONS
-     *
      */
 
-    /// @notice Deploys a new Validly pool for a given token pair
-    /// @dev Tokens are sorted internally to ensure consistent pool keys
-    /// @param _token0 The address of the first token in the pair
-    /// @param _token1 The address of the second token in the pair
-    /// @param _isStable Boolean indicating if the pool should be stable or volatile
-    /// @custom:error ValidlyFactory__createPair_alreadyDeployed Thrown if a pool for the given token pair and stability type already exists
-    /// @custom:error ValidlyFactory__createPair_failedDeployment Thrown if the Validly contract deployment fails
+    /** @notice Deploys a new Validly pool for a given token pair
+     *  @dev Tokens are sorted internally to ensure consistent pool keys
+     *  @param _token0 The address of the first token in the pair
+     *  @param _token1 The address of the second token in the pair
+     *  @param _isStable Boolean indicating if the pool should be stable or volatile
+     *  @custom:error ValidlyFactory__createPair_alreadyDeployed Thrown if a pool for the given token pair and stability type already exists
+     *  @custom:error ValidlyFactory__createPair_failedDeployment Thrown if the Validly contract deployment fails
+     */
     function createPair(address _token0, address _token1, bool _isStable) external returns (address) {
         (_token0, _token1) = _token0 < _token1 ? (_token0, _token1) : (_token1, _token0);
 
@@ -108,11 +101,12 @@ contract ValidlyFactory {
         return address(validly);
     }
 
-    /// @notice Creates a new Validly pool, mostly for rebase tokens, which is not indexed in pools mapping
-    /// @dev This function is used to create a pool given the SovereignPool constructor arguments
-    /// @param _args The constructor arguments for the SovereignPool
-    /// @param _isStable Boolean indicating if the pool should be stable or volatile
-    /// @custom:error ValidlyFactory__createPool_failedDeployment Thrown if the Validly contract deployment fails
+    /** @notice Creates a new Validly pool, mostly for rebase tokens, which is not indexed in pools mapping
+     *  @dev This function is used to create a pool given the SovereignPool constructor arguments
+     *  @param _args The constructor arguments for the SovereignPool
+     *  @param _isStable Boolean indicating if the pool should be stable or volatile
+     *  @custom:error ValidlyFactory__createPool_failedDeployment Thrown if the Validly contract deployment fails
+     */
     function createPool(SovereignPoolConstructorArgs memory _args, bool _isStable) external returns (address validly) {
         _args.poolManager = address(this);
 
@@ -130,9 +124,7 @@ contract ValidlyFactory {
     }
 
     /**
-     *
      *  INTERNAL FUNCTIONS
-     *
      */
     function _poolKey(address token0, address token1, bool isStable) internal pure returns (bytes32 key) {
         key = keccak256(abi.encode(token0, token1, isStable));

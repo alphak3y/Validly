@@ -12,8 +12,8 @@ import {ISovereignPool} from "@valantis-core/pools/interfaces/ISovereignPool.sol
 
 /**
  * @title Constant Product Liquidity Module.
- *   @dev UniswapV2 style constant product,
- *        implemented as a Valantis Sovereign Liquidity Module.
+ * @dev UniswapV2 style constant product,
+ *      implemented as a Valantis Sovereign Liquidity Module.
  */
 contract Validly is ISovereignALM, ERC20, ReentrancyGuard {
     using SafeERC20 for IERC20Metadata;
@@ -54,7 +54,7 @@ contract Validly is ISovereignALM, ERC20, ReentrancyGuard {
 
     /**
      * @dev SovereignPool is both the entry point contract for swaps (via `swap` function),
-     *         and the contract in which token0 and token1 balances should be stored.
+     *      and the contract in which token0 and token1 balances should be stored.
      */
     ISovereignPool public immutable pool;
 
@@ -106,23 +106,21 @@ contract Validly is ISovereignALM, ERC20, ReentrancyGuard {
 
     /**
      * @notice Deposit liquidity into `POOL` and mint LP tokens.
-     *     @param _amount0 Amount of token0 deposited.
-     *     @param _amount1 Amount of token1 deposited.
-     *     @param _minShares Minimum amount of shares to mint.
-     *     @param _deadline Block timestamp after which this call reverts.
-     *     @param _recipient Address to mint LP tokens for.
-     *     @return shares Amount of shares minted.
+     * @param _amount0 Amount of token0 deposited.
+     * @param _amount1 Amount of token1 deposited.
+     * @param _minShares Minimum amount of shares to mint.
+     * @param _deadline Block timestamp after which this call reverts.
+     * @param _recipient Address to mint LP tokens for.
+     * @return shares Amount of shares minted.
      */
     function deposit(uint256 _amount0, uint256 _amount1, uint256 _minShares, uint256 _deadline, address _recipient)
         external
         ensureDeadline(_deadline)
         nonReentrant
-        returns (uint256 shares)
+        returns (uint256 shares, uint256 amount0, uint256 amount1)
     {
         if (_recipient == address(0)) revert Validly__deposit_invalidRecipient();
 
-        uint256 amount0;
-        uint256 amount1;
         uint256 totalSupplyCache = totalSupply();
         if (totalSupplyCache == 0) {
             // Minimum token amounts taken as amounts during first deposit
@@ -163,18 +161,18 @@ contract Validly is ISovereignALM, ERC20, ReentrancyGuard {
 
         _mint(_recipient, shares);
 
-        pool.depositLiquidity(amount0, amount1, msg.sender, "", abi.encode(msg.sender));
+        (amount0, amount1) = pool.depositLiquidity(amount0, amount1, msg.sender, "", abi.encode(msg.sender));
     }
 
     /**
      * @notice Withdraw liquidity from `POOL` and burn LP tokens.
-     *     @param _shares Amount of LP tokens to burn.
-     *     @param _amount0Min Minimum amount of token0 required for `_recipient`.
-     *     @param _amount1Min Minimum amount of token1 required for `_recipient`.
-     *     @param _deadline Block timestamp after which this call reverts.
-     *     @param _recipient Address to receive token0 and token1 amounts.
-     *     @return amount0 Amount of token0 withdrawn. WARNING: Potentially innacurate in case token0 is rebase.
-     *     @return amount1 Amount of token1 withdrawn. WARNING: Potentially innacurate in case token1 is rebase.
+     * @param _shares Amount of LP tokens to burn.
+     * @param _amount0Min Minimum amount of token0 required for `_recipient`.
+     * @param _amount1Min Minimum amount of token1 required for `_recipient`.
+     * @param _deadline Block timestamp after which this call reverts.
+     * @param _recipient Address to receive token0 and token1 amounts.
+     * @return amount0 Amount of token0 withdrawn. WARNING: Potentially innacurate in case token0 is rebase.
+     * @return amount1 Amount of token1 withdrawn. WARNING: Potentially innacurate in case token1 is rebase.
      */
     function withdraw(uint256 _shares, uint256 _amount0Min, uint256 _amount1Min, uint256 _deadline, address _recipient)
         external
@@ -224,8 +222,8 @@ contract Validly is ISovereignALM, ERC20, ReentrancyGuard {
 
     /**
      * @notice Swap callback from POOL.
-     *     @param _poolInput Contains fundamental data about the swap.
-     *     @return quote Quote information that prices tokenIn and tokenOut.
+     * @param _poolInput Contains fundamental data about the swap.
+     * @return quote Quote information that prices tokenIn and tokenOut.
      */
     function getLiquidityQuote(
         ALMLiquidityQuoteInput memory _poolInput,
@@ -237,13 +235,13 @@ contract Validly is ISovereignALM, ERC20, ReentrancyGuard {
         (uint256 reserveIn, uint256 reserveOut) = _poolInput.isZeroToOne ? (reserve0, reserve1) : (reserve1, reserve0);
 
         if (isStable) {
-            uint256 xy = _k(reserve0, reserve1);
+            uint256 stableInvariant = _stableInvariant(reserve0, reserve1);
             reserveIn = _poolInput.isZeroToOne ? reserveIn * 1e18 / decimals0 : reserveIn * 1e18 / decimals1;
             reserveOut = _poolInput.isZeroToOne ? reserveOut * 1e18 / decimals1 : reserveOut * 1e18 / decimals0;
             uint256 amountIn = _poolInput.isZeroToOne
                 ? _poolInput.amountInMinusFee * 1e18 / decimals0
                 : _poolInput.amountInMinusFee * 1e18 / decimals1;
-            uint256 y = reserveOut - _get_y(amountIn + reserveIn, xy, reserveOut);
+            uint256 y = reserveOut - _get_y(amountIn + reserveIn, stableInvariant, reserveOut);
             quote.amountOut = y * (_poolInput.isZeroToOne ? decimals1 : decimals0) / 1e18;
         } else {
             quote.amountOut = (reserveOut * _poolInput.amountInMinusFee) / (reserveIn + _poolInput.amountInMinusFee);
@@ -298,7 +296,7 @@ contract Validly is ISovereignALM, ERC20, ReentrancyGuard {
         return y;
     }
 
-    function _k(uint256 x, uint256 y) internal view returns (uint256) {
+    function _stableInvariant(uint256 x, uint256 y) internal view returns (uint256) {
         uint256 _x = x * 1e18 / decimals0;
         uint256 _y = y * 1e18 / decimals1;
         uint256 _a = (_x * _y) / 1e18;
