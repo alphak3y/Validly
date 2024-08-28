@@ -64,7 +64,7 @@ contract Validly is ISovereignALM, ERC20, ReentrancyGuard {
     bool public immutable isStable;
 
     /**
-     * @dev Decimals of token0  
+     * @dev Decimals of token0
      */
     uint256 public immutable decimals0;
 
