@@ -80,7 +80,7 @@ contract ValidlyFuzzTest is Test {
                 return;
             }
 
-            if (amount0 == 0 || amount1 == 0) {
+            if (amount0 == 0 || amount1 == 0 || expectedShares == 1000) {
                 vm.expectRevert(Validly.Validly__deposit_zeroShares.selector);
                 volatilePair.deposit(amount0, amount1, 0, block.timestamp + 1, address(1));
                 return;
