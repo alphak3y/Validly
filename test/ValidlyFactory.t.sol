@@ -13,6 +13,7 @@ import {
     SovereignPoolConstructorArgs
 } from "@valantis-core/pools/structs/SovereignPoolStructs.sol";
 import {SovereignPoolFactory} from "@valantis-core/pools/factories/SovereignPoolFactory.sol";
+import {SovereignPool} from "@valantis-core/pools/SovereignPool.sol";
 
 contract ValidlyFactoryTest is Test {
     ValidlyFactory public factory;
@@ -24,6 +25,8 @@ contract ValidlyFactoryTest is Test {
         // Create dummy tokens
         token0 = new ERC20Mock();
         token1 = new ERC20Mock();
+
+        (token0, token1) = address(token0) < address(token1) ? (token0, token1) : (token1, token0);
 
         protocolFactory = new ProtocolFactory(address(this));
 
@@ -71,5 +74,37 @@ contract ValidlyFactoryTest is Test {
 
         assertEq(Validly(pair).pool().token0(), address(token0));
         assertEq(Validly(pair).pool().token1(), address(token1));
+    }
+
+    function test_setPoolManagerFeeBips() public {
+        test_createPair();
+
+        bytes32 key = keccak256(abi.encode(address(token0), address(token1), true));
+
+        address pool = factory.pools(key);
+
+        vm.expectRevert(ValidlyFactory.ValidlyFactory__setPoolManagerFees_unauthorized.selector);
+        vm.prank(makeAddr("ALICE"));
+        factory.setPoolManagerFeeBips(pool, 100);
+
+        factory.setPoolManagerFeeBips(pool, 100);
+
+        assertEq(ISovereignPool(pool).poolManagerFeeBips(), 100);
+    }
+
+    function test_claimFees() public {
+        test_createPair();
+
+        bytes32 key = keccak256(abi.encode(address(token0), address(token1), true));
+
+        address pool = factory.pools(key);
+
+        vm.store(address(pool), bytes32(uint256(5)), bytes32(uint256(1e18)));
+        vm.store(address(pool), bytes32(uint256(6)), bytes32(uint256(10e18)));
+
+        factory.claimFees(pool);
+
+        assertEq(SovereignPool(pool).feeProtocol0(), 1e18);
+        assertEq(SovereignPool(pool).feeProtocol1(), 10e18);
     }
 }

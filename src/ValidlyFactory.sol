@@ -14,6 +14,7 @@ contract ValidlyFactory {
     error ValidlyFactory__createPair_failedDeployment();
     error ValidlyFactory__createPair_alreadyDeployed();
     error ValidlyFactory__createPool_failedDeployment();
+    error ValidlyFactory__setPoolManagerFees_unauthorized();
 
     /**
      *  IMMUTABLES
@@ -59,12 +60,13 @@ contract ValidlyFactory {
 
     /**
      * @notice Deploys a new Validly pool for a given token pair
-     *  @dev Tokens are sorted internally to ensure consistent pool keys
-     *  @param _token0 The address of the first token in the pair
-     *  @param _token1 The address of the second token in the pair
-     *  @param _isStable Boolean indicating if the pool should be stable or volatile
-     *  @custom:error ValidlyFactory__createPair_alreadyDeployed Thrown if a pool for the given token pair and stability type already exists
-     *  @custom:error ValidlyFactory__createPair_failedDeployment Thrown if the Validly contract deployment fails
+     * @dev Tokens are sorted internally to ensure consistent pool keys
+     * @param _token0 The address of the first token in the pair
+     * @param _token1 The address of the second token in the pair
+     * @param _isStable Boolean indicating if the pool should be stable or volatile
+     * @custom:error ValidlyFactory__createPair_alreadyDeployed Thrown if a pool for the given token pair and stability type already exists
+     * @custom:error ValidlyFactory__createPair_failedDeployment Thrown if the Validly contract deployment fails
+     * @custom:error ValidlyFactory__createPair_invalidFeeBips Thrown if the feeBips is not between 0 and 10000
      */
     function createPair(address _token0, address _token1, bool _isStable) external returns (address) {
         (_token0, _token1) = _token0 < _token1 ? (_token0, _token1) : (_token1, _token0);
@@ -99,8 +101,6 @@ contract ValidlyFactory {
 
         ISovereignPool(pool).setALM(address(validly));
 
-        ISovereignPool(pool).setPoolManager(address(0));
-
         pools[poolKey] = pool;
 
         return address(validly);
@@ -108,10 +108,10 @@ contract ValidlyFactory {
 
     /**
      * @notice Creates a new Validly pool, mostly for rebase tokens, which is not indexed in pools mapping
-     *  @dev This function is used to create a pool given the SovereignPool constructor arguments
-     *  @param _args The constructor arguments for the SovereignPool
-     *  @param _isStable Boolean indicating if the pool should be stable or volatile
-     *  @custom:error ValidlyFactory__createPool_failedDeployment Thrown if the Validly contract deployment fails
+     * @dev This function is used to create a pool given the SovereignPool constructor arguments
+     * @param _args The constructor arguments for the SovereignPool
+     * @param _isStable Boolean indicating if the pool should be stable or volatile
+     * @custom:error ValidlyFactory__createPool_failedDeployment Thrown if the Validly contract deployment fails
      */
     function createPool(SovereignPoolConstructorArgs memory _args, bool _isStable) external returns (address validly) {
         _args.poolManager = address(this);
@@ -125,8 +125,31 @@ contract ValidlyFactory {
         }
 
         ISovereignPool(pool).setALM(address(validly));
+    }
 
-        ISovereignPool(pool).setPoolManager(address(0));
+    /**
+     * @notice Sets the pool manager fees for a given pool
+     * @dev This function is used to set the pool manager fees for a given pool
+     * @param _pool The address of the pool to set the pool manager fees for
+     * @param _feeBips The fee percentage for the pool manager
+     * @custom:error ValidlyFactory__setPoolManagerFees_unauthorized Thrown if the caller is not the protocol manager
+     */
+    function setPoolManagerFeeBips(address _pool, uint256 _feeBips) external {
+        if (msg.sender != protocolFactory.protocolManager()) {
+            revert ValidlyFactory__setPoolManagerFees_unauthorized();
+        }
+
+        ISovereignPool(_pool).setPoolManagerFeeBips(_feeBips);
+    }
+
+    /**
+     * @notice Claims the pool manager fees for a given pool
+     * @dev This function is used to claim the pool manager fees for a given pool
+     * @param _pool The address of the pool to claim the pool manager fees for
+     */
+    function claimFees(address _pool) external {
+        // It marks all fees as protocol fees to be used by gauge
+        ISovereignPool(_pool).claimPoolManagerFees(10_000, 10_000);
     }
 
     /**
