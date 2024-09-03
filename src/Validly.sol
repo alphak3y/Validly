@@ -11,8 +11,8 @@ import {ALMLiquidityQuoteInput, ALMLiquidityQuote} from "@valantis-core/ALM/stru
 import {ISovereignPool} from "@valantis-core/pools/interfaces/ISovereignPool.sol";
 
 /**
- * @title Constant Product Liquidity Module.
- * @dev UniswapV2 style constant product,
+ * @title Validly Liquidity Module.
+ * @dev UniswapV2 style constant product, and Solidly' stable invariant
  *      implemented as a Valantis Sovereign Liquidity Module.
  */
 contract Validly is ISovereignALM, ERC20, ReentrancyGuard {
@@ -28,16 +28,17 @@ contract Validly is ISovereignALM, ERC20, ReentrancyGuard {
     error Validly__priceOutOfRange();
     error Validly__constructor_customSovereignVaultNotAllowed();
     error Validly__constructor_invalidPool();
+    error Validly__deposit_insufficientToken0Deposited();
+    error Validly__deposit_insufficientToken1Deposited();
+    error Validly__deposit_invalidRecipient();
+    error Validly__deposit_lessThanMinShares();
+    error Validly__deposit_zeroShares();
+    error Validly__getLiquidityQuote_feeInBipsZero();
     error Validly__withdraw_AmountZero();
     error Validly__withdraw_insufficientToken0Withdrawn();
     error Validly__withdraw_insufficientToken1Withdrawn();
     error Validly__withdraw_zeroShares();
     error Validly__withdraw_invalidRecipient();
-    error Validly__deposit_insufficientToken0Deposited();
-    error Validly__deposit_insufficientToken1Deposited();
-    error Validly__deposit_invalidRecipient();
-    error Validly__deposit_zeroShares();
-    error Validly__deposit_lessThanMinShares();
 
     /**
      *
@@ -240,6 +241,8 @@ contract Validly is ISovereignALM, ERC20, ReentrancyGuard {
         bytes calldata, /*_externalContext*/
         bytes calldata /*_verifierData*/
     ) external view override returns (ALMLiquidityQuote memory quote) {
+        if (_poolInput.feeInBips == 0) revert Validly__getLiquidityQuote_feeInBipsZero();
+
         (uint256 reserve0, uint256 reserve1) = pool.getReserves();
 
         (uint256 reserveIn, uint256 reserveOut) = _poolInput.isZeroToOne ? (reserve0, reserve1) : (reserve1, reserve0);

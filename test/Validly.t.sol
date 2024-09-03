@@ -2,14 +2,16 @@
 pragma solidity 0.8.24;
 
 import {Test} from "forge-std/Test.sol";
-import {Validly} from "../src/Validly.sol";
-import {ValidlyFactory} from "../src/ValidlyFactory.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ProtocolFactory} from "@valantis-core/protocol-factory/ProtocolFactory.sol";
 import {ISovereignPool} from "@valantis-core/pools/interfaces/ISovereignPool.sol";
 import {SovereignPoolSwapParams} from "@valantis-core/pools/structs/SovereignPoolStructs.sol";
 import {SovereignPoolFactory} from "@valantis-core/pools/factories/SovereignPoolFactory.sol";
+import {ALMLiquidityQuoteInput} from "@valantis-core/ALM/structs/SovereignALMStructs.sol";
+
+import {Validly} from "../src/Validly.sol";
+import {ValidlyFactory} from "../src/ValidlyFactory.sol";
 
 contract ValidlyTest is Test {
     ValidlyFactory public factory;
@@ -33,7 +35,7 @@ contract ValidlyTest is Test {
         protocolFactory.setSovereignPoolFactory(address(poolFactory));
 
         // Create ValidlyFactory
-        factory = new ValidlyFactory(address(protocolFactory), 0);
+        factory = new ValidlyFactory(address(protocolFactory), 1);
 
         // Create volatile and stable pairs
         volatilePair = Validly(factory.createPair(address(token0), address(token1), false));
@@ -147,11 +149,18 @@ contract ValidlyTest is Test {
 
         (uint256 amountInUsed, uint256 amountOut) = stablePool.swap(params);
 
-        assertApproxEqAbs(amountOut, amountInUsed, Math.mulDiv(amountInUsed, 1, 1000000));
+        assertApproxEqAbs(amountOut, amountInUsed, Math.mulDiv(amountInUsed, 1, 1000));
     }
 
     function test_getLiquidityQuote_volatile() public {
         test_deposit();
+
+        ALMLiquidityQuoteInput memory input;
+        input.amountInMinusFee = 1 ether;
+        input.isZeroToOne = true;
+        vm.prank(address(volatilePool));
+        vm.expectRevert(Validly.Validly__getLiquidityQuote_feeInBipsZero.selector);
+        volatilePair.getLiquidityQuote(input, "", "");
 
         SovereignPoolSwapParams memory params;
 
@@ -170,7 +179,9 @@ contract ValidlyTest is Test {
 
         (uint256 amountInUsed, uint256 amountOut) = volatilePool.swap(params);
 
-        uint256 expectedAmountOut = Math.mulDiv(reserve1, amountInUsed, reserve0 + amountInUsed);
+        uint256 expectedAmountOut = Math.mulDiv(
+            reserve1, Math.mulDiv(amountInUsed, 10000, 10001), reserve0 + Math.mulDiv(amountInUsed, 10000, 10001)
+        );
 
         assertEq(amountOut, expectedAmountOut);
     }

@@ -2,8 +2,6 @@
 pragma solidity 0.8.24;
 
 import {Test} from "forge-std/Test.sol";
-import {Validly} from "../src/Validly.sol";
-import {ValidlyFactory} from "../src/ValidlyFactory.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ProtocolFactory} from "@valantis-core/protocol-factory/ProtocolFactory.sol";
@@ -13,6 +11,10 @@ import {
     SovereignPoolConstructorArgs
 } from "@valantis-core/pools/structs/SovereignPoolStructs.sol";
 import {SovereignPoolFactory} from "@valantis-core/pools/factories/SovereignPoolFactory.sol";
+import {SovereignPool} from "@valantis-core/pools/SovereignPool.sol";
+
+import {Validly} from "../src/Validly.sol";
+import {ValidlyFactory} from "../src/ValidlyFactory.sol";
 
 contract ValidlyFactoryTest is Test {
     ValidlyFactory public factory;
@@ -25,6 +27,8 @@ contract ValidlyFactoryTest is Test {
         token0 = new ERC20Mock();
         token1 = new ERC20Mock();
 
+        (token0, token1) = address(token0) < address(token1) ? (token0, token1) : (token1, token0);
+
         protocolFactory = new ProtocolFactory(address(this));
 
         SovereignPoolFactory poolFactory = new SovereignPoolFactory();
@@ -32,12 +36,12 @@ contract ValidlyFactoryTest is Test {
         protocolFactory.setSovereignPoolFactory(address(poolFactory));
 
         // Create ValidlyFactory
-        factory = new ValidlyFactory(address(protocolFactory), 0);
+        factory = new ValidlyFactory(address(protocolFactory), 1);
     }
 
     function test_constructor() public {
         assertEq(address(factory.protocolFactory()), address(protocolFactory));
-        assertEq(factory.feeBips(), 0);
+        assertEq(factory.feeBips(), 1);
 
         vm.expectRevert(ValidlyFactory.ValidlyFactory__constructor_invalidFeeBips.selector);
 
@@ -71,5 +75,51 @@ contract ValidlyFactoryTest is Test {
 
         assertEq(Validly(pair).pool().token0(), address(token0));
         assertEq(Validly(pair).pool().token1(), address(token1));
+    }
+
+    function test_setPoolManagerFeeBips() public {
+        test_createPair();
+
+        bytes32 key = keccak256(abi.encode(address(token0), address(token1), true));
+
+        address pool = factory.pools(key);
+
+        vm.expectRevert(ValidlyFactory.ValidlyFactory__onlyProtocolManager.selector);
+        vm.prank(makeAddr("ALICE"));
+        factory.setPoolManagerFeeBips(pool, 100);
+
+        factory.setPoolManagerFeeBips(pool, 100);
+
+        assertEq(ISovereignPool(pool).poolManagerFeeBips(), 100);
+    }
+
+    function test_claimFees() public {
+        test_createPair();
+
+        bytes32 key = keccak256(abi.encode(address(token0), address(token1), true));
+
+        address pool = factory.pools(key);
+
+        vm.store(address(pool), bytes32(uint256(5)), bytes32(uint256(1e18)));
+        vm.store(address(pool), bytes32(uint256(6)), bytes32(uint256(10e18)));
+
+        factory.claimFees(pool);
+
+        assertEq(SovereignPool(pool).feeProtocol0(), 1e18);
+        assertEq(SovereignPool(pool).feeProtocol1(), 10e18);
+    }
+
+    function test_claimTokens() public {
+        token0.mint(address(factory), 1e18);
+
+        address ALICE = makeAddr("ALICE");
+
+        vm.expectRevert(ValidlyFactory.ValidlyFactory__onlyProtocolManager.selector);
+        vm.prank(ALICE);
+        factory.claimTokens(address(token0), ALICE);
+
+        factory.claimTokens(address(token0), ALICE);
+
+        assertEq(token0.balanceOf(ALICE), 1e18);
     }
 }
