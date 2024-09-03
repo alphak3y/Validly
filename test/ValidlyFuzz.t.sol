@@ -3,8 +3,6 @@ pragma solidity 0.8.24;
 
 import {stdError} from "forge-std/StdError.sol";
 import {Test} from "forge-std/Test.sol";
-import {Validly} from "../src/Validly.sol";
-import {ValidlyFactory} from "../src/ValidlyFactory.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ProtocolFactory} from "@valantis-core/protocol-factory/ProtocolFactory.sol";
@@ -13,6 +11,9 @@ import {ISovereignPool} from "@valantis-core/pools/interfaces/ISovereignPool.sol
 import {SovereignPoolSwapParams} from "@valantis-core/pools/structs/SovereignPoolStructs.sol";
 import {SovereignPoolFactory} from "@valantis-core/pools/factories/SovereignPoolFactory.sol";
 import {ALMLiquidityQuoteInput, ALMLiquidityQuote} from "@valantis-core/ALM/structs/SovereignALMStructs.sol";
+
+import {Validly} from "../src/Validly.sol";
+import {ValidlyFactory} from "../src/ValidlyFactory.sol";
 
 contract ValidlyFuzzTest is Test {
     error SovereignPool__swap_zeroAmountInOrOut();
@@ -235,11 +236,49 @@ contract ValidlyFuzzTest is Test {
 
         uint256 k_pre = _stableInvariant(reserve0, reserve1);
 
-        ISovereignPool(stablePool).swap(params);
+        (uint256 amountInUsed, uint256 amountOut) = ISovereignPool(stablePool).swap(params);
 
-        uint256 k_post = _stableInvariant(reserve0, reserve1);
+        uint256 k_post = isZeroToOne ? _stableInvariant(reserve0 + amountInUsed, reserve1 - amountOut) : _stableInvariant(reserve0 - amountOut, reserve1 + amountInUsed);
 
         assertGe(k_post, k_pre);
+    }
+
+    function test_swap_stable_rebase(uint256 reserve, uint256 amountIn, bool isZeroToOne) public {
+        uint256 reserve0 = bound(reserve, 1e18, 1e26);
+        uint256 reserve1 = reserve0;
+        amountIn = bound(amountIn, 1000, 1e26);
+
+        token0.mint(stablePool, reserve0);
+        token1.mint(stablePool, reserve1);
+
+        vm.store(stablePool, bytes32(uint256(10)), bytes32(reserve0));
+        vm.store(stablePool, bytes32(uint256(11)), bytes32(reserve1));
+
+        if (isZeroToOne) {
+            token0.mint(address(this), amountIn);
+            token0.approve(stablePool, amountIn);
+        } else {
+            token1.mint(address(this), amountIn);
+            token1.approve(stablePool, amountIn);
+        }
+
+        SovereignPoolSwapParams memory params;
+
+        params.isSwapCallback = false;
+        params.isZeroToOne = isZeroToOne;
+        params.amountIn = amountIn;
+        params.amountOutMin = 0;
+        params.deadline = block.timestamp + 1;
+        params.recipient = address(this);
+        params.swapTokenOut = isZeroToOne ? address(token1) : address(token0);
+
+        uint256 k_pre = _stableInvariant(reserve0, reserve1);
+
+        (uint256 amountInUsed, uint256 amountOut) = ISovereignPool(stablePool).swap(params);
+
+        uint256 k_post = isZeroToOne ? _stableInvariant(reserve0 + amountInUsed - 10, reserve1 + amountOut + 10) : _stableInvariant(reserve0 + amountOut + 10, reserve1 + amountInUsed - 10);
+
+        assertGe(k_post, k_pre);        
     }
 
     function _stableInvariant(uint256 x, uint256 y) internal pure returns (uint256) {

@@ -1,15 +1,29 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import {Validly} from "src/Validly.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IProtocolFactory} from "@valantis-core/protocol-factory/interfaces/IProtocolFactory.sol";
 import {SovereignPoolConstructorArgs} from "@valantis-core/pools/structs/SovereignPoolStructs.sol";
 import {ISovereignPool} from "@valantis-core/pools/interfaces/ISovereignPool.sol";
 
+import {Validly} from "src/Validly.sol";
+
 contract ValidlyFactory {
+    using SafeERC20 for IERC20;
+
+    /**
+     *  EVENTS
+     */
+    event FeesClaimed(address indexed pool);
+    event PoolCreated(address indexed pool, address indexed token0, address indexed token1, bool isStable);
+    event PoolManagerFeeBipsSet(address indexed pool, uint256 feeBips);
+    event TokenClaimed(address indexed token, address indexed recipient, uint256 amount);
+
     /**
      *  ERRORS
      */
+    error ValidlyFactory__onlyProtocolManager();
     error ValidlyFactory__constructor_invalidFeeBips();
     error ValidlyFactory__createPair_failedDeployment();
     error ValidlyFactory__createPair_alreadyDeployed();
@@ -52,6 +66,19 @@ contract ValidlyFactory {
         }
 
         feeBips = _feeBips;
+    }
+
+
+    /**
+     *
+     *  MODIFIERS
+     *
+     */
+    modifier onlyProtocolManager() {
+        if (msg.sender != protocolFactory.protocolManager()) {
+            revert ValidlyFactory__onlyProtocolManager();
+        }
+        _;
     }
 
     /**
@@ -103,6 +130,8 @@ contract ValidlyFactory {
 
         pools[poolKey] = pool;
 
+        emit PoolCreated(pool, _token0, _token1, _isStable);
+
         return address(validly);
     }
 
@@ -125,6 +154,8 @@ contract ValidlyFactory {
         }
 
         ISovereignPool(pool).setALM(address(validly));
+
+        emit PoolCreated(pool, _args.token0, _args.token1, _isStable);
     }
 
     /**
@@ -134,12 +165,23 @@ contract ValidlyFactory {
      * @param _feeBips The fee percentage for the pool manager
      * @custom:error ValidlyFactory__setPoolManagerFees_unauthorized Thrown if the caller is not the protocol manager
      */
-    function setPoolManagerFeeBips(address _pool, uint256 _feeBips) external {
-        if (msg.sender != protocolFactory.protocolManager()) {
-            revert ValidlyFactory__setPoolManagerFees_unauthorized();
-        }
-
+    function setPoolManagerFeeBips(address _pool, uint256 _feeBips) external onlyProtocolManager{
         ISovereignPool(_pool).setPoolManagerFeeBips(_feeBips);
+
+        emit PoolManagerFeeBipsSet(_pool, _feeBips);
+    }
+
+    /**
+     * @notice Claims rebase token fees accumulated in Factory
+     * @param _token The address of the token to claim
+     * @param _recipient The address of the recipient
+     */
+    function claimTokens(address _token, address _recipient) external onlyProtocolManager{
+        IERC20 token = IERC20(_token);
+        uint256 balance = token.balanceOf(address(this));
+        token.safeTransfer(_recipient, balance);
+
+        emit TokenClaimed(_token, _recipient, balance);
     }
 
     /**
@@ -150,6 +192,8 @@ contract ValidlyFactory {
     function claimFees(address _pool) external {
         // It marks all fees as protocol fees to be used by gauge
         ISovereignPool(_pool).claimPoolManagerFees(10_000, 10_000);
+
+        emit FeesClaimed(_pool);
     }
 
     /**

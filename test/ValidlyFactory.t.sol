@@ -2,8 +2,6 @@
 pragma solidity 0.8.24;
 
 import {Test} from "forge-std/Test.sol";
-import {Validly} from "../src/Validly.sol";
-import {ValidlyFactory} from "../src/ValidlyFactory.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ProtocolFactory} from "@valantis-core/protocol-factory/ProtocolFactory.sol";
@@ -14,6 +12,9 @@ import {
 } from "@valantis-core/pools/structs/SovereignPoolStructs.sol";
 import {SovereignPoolFactory} from "@valantis-core/pools/factories/SovereignPoolFactory.sol";
 import {SovereignPool} from "@valantis-core/pools/SovereignPool.sol";
+
+import {Validly} from "../src/Validly.sol";
+import {ValidlyFactory} from "../src/ValidlyFactory.sol";
 
 contract ValidlyFactoryTest is Test {
     ValidlyFactory public factory;
@@ -83,7 +84,7 @@ contract ValidlyFactoryTest is Test {
 
         address pool = factory.pools(key);
 
-        vm.expectRevert(ValidlyFactory.ValidlyFactory__setPoolManagerFees_unauthorized.selector);
+        vm.expectRevert(ValidlyFactory.ValidlyFactory__onlyProtocolManager.selector);
         vm.prank(makeAddr("ALICE"));
         factory.setPoolManagerFeeBips(pool, 100);
 
@@ -106,5 +107,19 @@ contract ValidlyFactoryTest is Test {
 
         assertEq(SovereignPool(pool).feeProtocol0(), 1e18);
         assertEq(SovereignPool(pool).feeProtocol1(), 10e18);
+    }
+
+    function test_claimTokens() public {
+        token0.mint(address(factory), 1e18);
+
+        address ALICE = makeAddr("ALICE");
+
+        vm.expectRevert(ValidlyFactory.ValidlyFactory__onlyProtocolManager.selector);
+        vm.prank(ALICE);
+        factory.claimTokens(address(token0), ALICE);
+
+        factory.claimTokens(address(token0), ALICE);
+
+        assertEq(token0.balanceOf(ALICE), 1e18);
     }
 }

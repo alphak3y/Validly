@@ -2,8 +2,6 @@
 pragma solidity 0.8.24;
 
 import {Test} from "forge-std/Test.sol";
-import {Validly} from "../src/Validly.sol";
-import {ValidlyFactory} from "../src/ValidlyFactory.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ProtocolFactory} from "@valantis-core/protocol-factory/ProtocolFactory.sol";
@@ -11,6 +9,9 @@ import {ISovereignPool} from "@valantis-core/pools/interfaces/ISovereignPool.sol
 import {SovereignPoolSwapParams} from "@valantis-core/pools/structs/SovereignPoolStructs.sol";
 import {SovereignPoolFactory} from "@valantis-core/pools/factories/SovereignPoolFactory.sol";
 import {ALMLiquidityQuoteInput} from "@valantis-core/ALM/structs/SovereignALMStructs.sol";
+
+import {Validly} from "../src/Validly.sol";
+import {ValidlyFactory} from "../src/ValidlyFactory.sol";
 
 contract ValidlyTest is Test {
     ValidlyFactory public factory;
