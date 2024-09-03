@@ -68,7 +68,6 @@ contract ValidlyFactory {
         feeBips = _feeBips;
     }
 
-
     /**
      *
      *  MODIFIERS
@@ -165,7 +164,7 @@ contract ValidlyFactory {
      * @param _feeBips The fee percentage for the pool manager
      * @custom:error ValidlyFactory__setPoolManagerFees_unauthorized Thrown if the caller is not the protocol manager
      */
-    function setPoolManagerFeeBips(address _pool, uint256 _feeBips) external onlyProtocolManager{
+    function setPoolManagerFeeBips(address _pool, uint256 _feeBips) external onlyProtocolManager {
         ISovereignPool(_pool).setPoolManagerFeeBips(_feeBips);
 
         emit PoolManagerFeeBipsSet(_pool, _feeBips);
@@ -176,7 +175,7 @@ contract ValidlyFactory {
      * @param _token The address of the token to claim
      * @param _recipient The address of the recipient
      */
-    function claimTokens(address _token, address _recipient) external onlyProtocolManager{
+    function claimTokens(address _token, address _recipient) external onlyProtocolManager {
         IERC20 token = IERC20(_token);
         uint256 balance = token.balanceOf(address(this));
         token.safeTransfer(_recipient, balance);

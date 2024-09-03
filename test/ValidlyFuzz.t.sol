@@ -238,7 +238,9 @@ contract ValidlyFuzzTest is Test {
 
         (uint256 amountInUsed, uint256 amountOut) = ISovereignPool(stablePool).swap(params);
 
-        uint256 k_post = isZeroToOne ? _stableInvariant(reserve0 + amountInUsed, reserve1 - amountOut) : _stableInvariant(reserve0 - amountOut, reserve1 + amountInUsed);
+        uint256 k_post = isZeroToOne
+            ? _stableInvariant(reserve0 + amountInUsed, reserve1 - amountOut)
+            : _stableInvariant(reserve0 - amountOut, reserve1 + amountInUsed);
 
         assertGe(k_post, k_pre);
     }
@@ -276,9 +278,11 @@ contract ValidlyFuzzTest is Test {
 
         (uint256 amountInUsed, uint256 amountOut) = ISovereignPool(stablePool).swap(params);
 
-        uint256 k_post = isZeroToOne ? _stableInvariant(reserve0 + amountInUsed - 10, reserve1 + amountOut + 10) : _stableInvariant(reserve0 + amountOut + 10, reserve1 + amountInUsed - 10);
+        uint256 k_post = isZeroToOne
+            ? _stableInvariant(reserve0 + amountInUsed - 10, reserve1 + amountOut + 10)
+            : _stableInvariant(reserve0 + amountOut + 10, reserve1 + amountInUsed - 10);
 
-        assertGe(k_post, k_pre);        
+        assertGe(k_post, k_pre);
     }
 
     function _stableInvariant(uint256 x, uint256 y) internal pure returns (uint256) {
