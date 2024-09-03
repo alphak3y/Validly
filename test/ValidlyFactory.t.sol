@@ -6,10 +6,7 @@ import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ProtocolFactory} from "@valantis-core/protocol-factory/ProtocolFactory.sol";
 import {ISovereignPool} from "@valantis-core/pools/interfaces/ISovereignPool.sol";
-import {
-    SovereignPoolSwapParams,
-    SovereignPoolConstructorArgs
-} from "@valantis-core/pools/structs/SovereignPoolStructs.sol";
+import {SovereignPoolSwapParams, SovereignPoolConstructorArgs} from "@valantis-core/pools/structs/SovereignPoolStructs.sol";
 import {SovereignPoolFactory} from "@valantis-core/pools/factories/SovereignPoolFactory.sol";
 import {SovereignPool} from "@valantis-core/pools/SovereignPool.sol";
 
@@ -27,7 +24,9 @@ contract ValidlyFactoryTest is Test {
         token0 = new ERC20Mock();
         token1 = new ERC20Mock();
 
-        (token0, token1) = address(token0) < address(token1) ? (token0, token1) : (token1, token0);
+        (token0, token1) = address(token0) < address(token1)
+            ? (token0, token1)
+            : (token1, token0);
 
         protocolFactory = new ProtocolFactory(address(this));
 
@@ -43,7 +42,9 @@ contract ValidlyFactoryTest is Test {
         assertEq(address(factory.protocolFactory()), address(protocolFactory));
         assertEq(factory.feeBips(), 1);
 
-        vm.expectRevert(ValidlyFactory.ValidlyFactory__constructor_invalidFeeBips.selector);
+        vm.expectRevert(
+            ValidlyFactory.ValidlyFactory__constructor_invalidFeeBips.selector
+        );
 
         new ValidlyFactory(address(protocolFactory), 10001);
     }
@@ -51,7 +52,9 @@ contract ValidlyFactoryTest is Test {
     function test_createPair() public {
         factory.createPair(address(token0), address(token1), true);
 
-        vm.expectRevert(ValidlyFactory.ValidlyFactory__createPair_alreadyDeployed.selector);
+        vm.expectRevert(
+            ValidlyFactory.ValidlyFactory__createPair_alreadyDeployed.selector
+        );
 
         factory.createPair(address(token0), address(token1), true);
     }
@@ -80,11 +83,15 @@ contract ValidlyFactoryTest is Test {
     function test_setPoolManagerFeeBips() public {
         test_createPair();
 
-        bytes32 key = keccak256(abi.encode(address(token0), address(token1), true));
+        bytes32 key = keccak256(
+            abi.encode(address(token0), address(token1), true)
+        );
 
         address pool = factory.pools(key);
 
-        vm.expectRevert(ValidlyFactory.ValidlyFactory__onlyProtocolManager.selector);
+        vm.expectRevert(
+            ValidlyFactory.ValidlyFactory__onlyProtocolManager.selector
+        );
         vm.prank(makeAddr("ALICE"));
         factory.setPoolManagerFeeBips(pool, 100);
 
@@ -96,7 +103,9 @@ contract ValidlyFactoryTest is Test {
     function test_claimFees() public {
         test_createPair();
 
-        bytes32 key = keccak256(abi.encode(address(token0), address(token1), true));
+        bytes32 key = keccak256(
+            abi.encode(address(token0), address(token1), true)
+        );
 
         address pool = factory.pools(key);
 
@@ -114,9 +123,21 @@ contract ValidlyFactoryTest is Test {
 
         address ALICE = makeAddr("ALICE");
 
-        vm.expectRevert(ValidlyFactory.ValidlyFactory__onlyProtocolManager.selector);
+        vm.expectRevert(
+            ValidlyFactory.ValidlyFactory__onlyProtocolManager.selector
+        );
         vm.prank(ALICE);
         factory.claimTokens(address(token0), ALICE);
+
+        vm.expectRevert(
+            ValidlyFactory.ValidlyFactory__claimTokens_invalidToken.selector
+        );
+        factory.claimTokens(address(0), ALICE);
+
+        vm.expectRevert(
+            ValidlyFactory.ValidlyFactory__claimTokens_invalidRecipient.selector
+        );
+        factory.claimTokens(address(token0), address(0));
 
         factory.claimTokens(address(token0), ALICE);
 

@@ -1,0 +1,1 @@
+genhtml lcov.info.pruned -o coverage/html

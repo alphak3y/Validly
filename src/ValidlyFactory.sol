@@ -33,10 +33,10 @@ contract ValidlyFactory {
      *  ERRORS
      */
     error ValidlyFactory__onlyProtocolManager();
+    error ValidlyFactory__claimTokens_invalidRecipient();
+    error ValidlyFactory__claimTokens_invalidToken();
     error ValidlyFactory__constructor_invalidFeeBips();
-    error ValidlyFactory__createPair_failedDeployment();
     error ValidlyFactory__createPair_alreadyDeployed();
-    error ValidlyFactory__createPool_failedDeployment();
     error ValidlyFactory__setPoolManagerFees_unauthorized();
 
     /**
@@ -135,11 +135,7 @@ contract ValidlyFactory {
 
         address pool = protocolFactory.deploySovereignPool(args);
 
-        Validly validly = new Validly{salt: poolKey}(pool, _isStable);
-
-        if (address(validly) == address(0)) {
-            revert ValidlyFactory__createPair_failedDeployment();
-        }
+        Validly validly = new Validly(pool, _isStable);
 
         ISovereignPool(pool).setALM(address(validly));
 
@@ -166,10 +162,6 @@ contract ValidlyFactory {
         address pool = protocolFactory.deploySovereignPool(_args);
 
         validly = address(new Validly(pool, _isStable));
-
-        if (address(validly) == address(0)) {
-            revert ValidlyFactory__createPool_failedDeployment();
-        }
 
         ISovereignPool(pool).setALM(address(validly));
 
@@ -203,6 +195,11 @@ contract ValidlyFactory {
         address _token,
         address _recipient
     ) external onlyProtocolManager {
+        if (_token == address(0))
+            revert ValidlyFactory__claimTokens_invalidToken();
+        if (_recipient == address(0))
+            revert ValidlyFactory__claimTokens_invalidRecipient();
+
         IERC20 token = IERC20(_token);
         uint256 balance = token.balanceOf(address(this));
 

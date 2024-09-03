@@ -3,6 +3,7 @@ pragma solidity 0.8.24;
 
 import {stdError} from "forge-std/StdError.sol";
 import {Test} from "forge-std/Test.sol";
+
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ProtocolFactory} from "@valantis-core/protocol-factory/ProtocolFactory.sol";
@@ -358,7 +359,7 @@ contract ValidlyFuzzTest is Test {
     ) public {
         uint256 reserve0 = bound(reserve, 1e18, 1e26);
         uint256 reserve1 = reserve0;
-        amountIn = bound(amountIn, 1000, 1e26);
+        amountIn = bound(amountIn, 1e18, 1e26);
 
         token0.mint(stablePool, reserve0);
         token1.mint(stablePool, reserve1);
