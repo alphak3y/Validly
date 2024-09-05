@@ -25,9 +25,3 @@ $ forge test
 ```shell
 $ forge fmt
 ```
-
-### Coverage
-
-```shell
-$ bash coverage.sh
-```
