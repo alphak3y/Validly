@@ -38,12 +38,8 @@ contract ValidlyTest is Test {
         factory = new ValidlyFactory(address(protocolFactory), 1);
 
         // Create volatile and stable pairs
-        volatilePair = Validly(
-            factory.createPair(address(token0), address(token1), false)
-        );
-        stablePair = Validly(
-            factory.createPair(address(token1), address(token0), true)
-        );
+        volatilePair = Validly(factory.createPair(address(token0), address(token1), false));
+        stablePair = Validly(factory.createPair(address(token1), address(token0), true));
 
         volatilePool = volatilePair.pool();
         stablePool = stablePair.pool();
@@ -61,9 +57,7 @@ contract ValidlyTest is Test {
             abi.encodeWithSelector(ISovereignPool.sovereignVault.selector),
             abi.encode(address(volatilePair))
         );
-        vm.expectRevert(
-            Validly.Validly__constructor_customSovereignVaultNotAllowed.selector
-        );
+        vm.expectRevert(Validly.Validly__constructor_customSovereignVaultNotAllowed.selector);
         new Validly(address(volatilePool), false);
 
         assertEq(volatilePair.decimals0(), 1e18);
@@ -80,13 +74,7 @@ contract ValidlyTest is Test {
         volatilePair.deposit(10 ether, 0, 0, block.timestamp + 1, address(0));
 
         vm.expectRevert(Validly.Validly__deposit_lessThanMinShares.selector);
-        volatilePair.deposit(
-            10000,
-            10000,
-            10000,
-            block.timestamp + 1,
-            address(this)
-        );
+        volatilePair.deposit(10000, 10000, 10000, block.timestamp + 1, address(this));
 
         token0.mint(address(this), 1000 ether);
         token1.mint(address(this), 1000 ether);
@@ -94,21 +82,9 @@ contract ValidlyTest is Test {
         token0.approve(address(volatilePair), 1000 ether);
         token1.approve(address(volatilePair), 1000 ether);
 
-        volatilePair.deposit(
-            1 ether,
-            10 ether,
-            0,
-            block.timestamp + 1,
-            address(this)
-        );
+        volatilePair.deposit(1 ether, 10 ether, 0, block.timestamp + 1, address(this));
 
-        volatilePair.deposit(
-            1 ether,
-            20 ether,
-            0,
-            block.timestamp + 1,
-            address(this)
-        );
+        volatilePair.deposit(1 ether, 20 ether, 0, block.timestamp + 1, address(this));
 
         vm.expectRevert(Validly.Validly__deposit_zeroShares.selector);
         volatilePair.deposit(1 ether, 0, 0, block.timestamp + 1, address(this));
@@ -131,49 +107,20 @@ contract ValidlyTest is Test {
         uint256 sharesToWithdraw = shares / 2;
 
         (uint256 reserve0, uint256 reserve1) = volatilePool.getReserves();
-        uint256 expectedAmount0 = Math.mulDiv(
-            reserve0,
-            sharesToWithdraw,
-            volatilePair.totalSupply()
-        );
-        uint256 expectedAmount1 = Math.mulDiv(
-            reserve1,
-            sharesToWithdraw,
-            volatilePair.totalSupply()
-        );
+        uint256 expectedAmount0 = Math.mulDiv(reserve0, sharesToWithdraw, volatilePair.totalSupply());
+        uint256 expectedAmount1 = Math.mulDiv(reserve1, sharesToWithdraw, volatilePair.totalSupply());
 
         vm.expectRevert(Validly.Validly__withdraw_AmountZero.selector);
         volatilePair.withdraw(1, 0, 0, block.timestamp + 1, address(this));
 
-        vm.expectRevert(
-            Validly.Validly__withdraw_insufficientToken0Withdrawn.selector
-        );
-        volatilePair.withdraw(
-            sharesToWithdraw,
-            100 ether,
-            0,
-            block.timestamp + 1,
-            address(this)
-        );
+        vm.expectRevert(Validly.Validly__withdraw_insufficientToken0Withdrawn.selector);
+        volatilePair.withdraw(sharesToWithdraw, 100 ether, 0, block.timestamp + 1, address(this));
 
-        vm.expectRevert(
-            Validly.Validly__withdraw_insufficientToken1Withdrawn.selector
-        );
-        volatilePair.withdraw(
-            sharesToWithdraw,
-            0,
-            100 ether,
-            block.timestamp + 1,
-            address(this)
-        );
+        vm.expectRevert(Validly.Validly__withdraw_insufficientToken1Withdrawn.selector);
+        volatilePair.withdraw(sharesToWithdraw, 0, 100 ether, block.timestamp + 1, address(this));
 
-        (uint256 amount0, uint256 amount1) = volatilePair.withdraw(
-            sharesToWithdraw,
-            0,
-            0,
-            block.timestamp + 1,
-            address(this)
-        );
+        (uint256 amount0, uint256 amount1) =
+            volatilePair.withdraw(sharesToWithdraw, 0, 0, block.timestamp + 1, address(this));
 
         assertEq(amount0, expectedAmount0);
         assertEq(amount1, expectedAmount1);
@@ -186,13 +133,7 @@ contract ValidlyTest is Test {
         token0.approve(address(stablePair), 1000 ether);
         token1.approve(address(stablePair), 1000 ether);
 
-        stablePair.deposit(
-            100 ether,
-            100 ether,
-            0,
-            block.timestamp + 1,
-            address(this)
-        );
+        stablePair.deposit(100 ether, 100 ether, 0, block.timestamp + 1, address(this));
 
         SovereignPoolSwapParams memory params;
 
@@ -208,11 +149,7 @@ contract ValidlyTest is Test {
 
         (uint256 amountInUsed, uint256 amountOut) = stablePool.swap(params);
 
-        assertApproxEqAbs(
-            amountOut,
-            amountInUsed,
-            Math.mulDiv(amountInUsed, 1, 1000)
-        );
+        assertApproxEqAbs(amountOut, amountInUsed, Math.mulDiv(amountInUsed, 1, 1000));
     }
 
     function test_getLiquidityQuote_volatile() public {
@@ -226,9 +163,7 @@ contract ValidlyTest is Test {
         volatilePair.getLiquidityQuote(input, "", "");
 
         vm.prank(address(volatilePool));
-        vm.expectRevert(
-            Validly.Validly__getLiquidityQuote_feeInBipsZero.selector
-        );
+        vm.expectRevert(Validly.Validly__getLiquidityQuote_feeInBipsZero.selector);
         volatilePair.getLiquidityQuote(input, "", "");
 
         SovereignPoolSwapParams memory params;
@@ -249,9 +184,7 @@ contract ValidlyTest is Test {
         (uint256 amountInUsed, uint256 amountOut) = volatilePool.swap(params);
 
         uint256 expectedAmountOut = Math.mulDiv(
-            reserve1,
-            Math.mulDiv(amountInUsed, 10000, 10001),
-            reserve0 + Math.mulDiv(amountInUsed, 10000, 10001)
+            reserve1, Math.mulDiv(amountInUsed, 10000, 10001), reserve0 + Math.mulDiv(amountInUsed, 10000, 10001)
         );
 
         assertEq(amountOut, expectedAmountOut);
@@ -268,11 +201,7 @@ contract ValidlyTest is Test {
         token1.approve(address(volatilePair), 100 ether);
 
         vm.prank(address(volatilePool));
-        volatilePair.onDepositLiquidityCallback(
-            1 ether,
-            1 ether,
-            abi.encode(address(this))
-        );
+        volatilePair.onDepositLiquidityCallback(1 ether, 1 ether, abi.encode(address(this)));
 
         assertEq(token0.balanceOf(address(volatilePool)), 1 ether);
         assertEq(token1.balanceOf(address(volatilePool)), 1 ether);
@@ -306,13 +235,9 @@ contract ValidlyTest is Test {
 
         vm.prank(address(stablePool));
         vm.mockCall(
-            address(stablePool),
-            abi.encodeWithSelector(ISovereignPool.getReserves.selector),
-            abi.encode(5e17, 5e17)
+            address(stablePool), abi.encodeWithSelector(ISovereignPool.getReserves.selector), abi.encode(5e17, 5e17)
         );
-        vm.expectRevert(
-            Validly.Validly__onSwapCallback_invariantViolated.selector
-        );
+        vm.expectRevert(Validly.Validly__onSwapCallback_invariantViolated.selector);
         stablePair.onSwapCallback(true, 5e17, 5e17);
     }
 
@@ -344,13 +269,9 @@ contract ValidlyTest is Test {
 
         vm.prank(address(volatilePool));
         vm.mockCall(
-            address(volatilePool),
-            abi.encodeWithSelector(ISovereignPool.getReserves.selector),
-            abi.encode(5e17, 5e17)
+            address(volatilePool), abi.encodeWithSelector(ISovereignPool.getReserves.selector), abi.encode(5e17, 5e17)
         );
-        vm.expectRevert(
-            Validly.Validly__onSwapCallback_invariantViolated.selector
-        );
+        vm.expectRevert(Validly.Validly__onSwapCallback_invariantViolated.selector);
         volatilePair.onSwapCallback(true, 5e17, 5e17);
     }
 }

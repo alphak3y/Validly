@@ -50,8 +50,7 @@ contract Validly is IValidly, ERC20, ReentrancyGuard {
      */
     uint256 public constant MINIMUM_LIQUIDITY = 1000;
 
-    bytes32 public constant INVARIANT_CACHE_SLOT =
-        keccak256("validly.invariant");
+    bytes32 public constant INVARIANT_CACHE_SLOT = keccak256("validly.invariant");
 
     /**
      *
@@ -85,10 +84,7 @@ contract Validly is IValidly, ERC20, ReentrancyGuard {
      *  CONSTRUCTOR
      *
      */
-    constructor(
-        address _pool,
-        bool _isStable
-    ) ERC20("Validly LP Token", "VAL-LP") {
+    constructor(address _pool, bool _isStable) ERC20("Validly LP Token", "VAL-LP") {
         if (_pool == address(0)) revert Validly__constructor_invalidPool();
 
         pool = ISovereignPool(_pool);
@@ -135,13 +131,7 @@ contract Validly is IValidly, ERC20, ReentrancyGuard {
      * @param _recipient Address to mint LP tokens for.
      * @return shares Amount of shares minted.
      */
-    function deposit(
-        uint256 _amount0,
-        uint256 _amount1,
-        uint256 _minShares,
-        uint256 _deadline,
-        address _recipient
-    )
+    function deposit(uint256 _amount0, uint256 _amount1, uint256 _minShares, uint256 _deadline, address _recipient)
         external
         override
         ensureDeadline(_deadline)
@@ -170,21 +160,11 @@ contract Validly is IValidly, ERC20, ReentrancyGuard {
             // Normal deposits are made using `onDepositLiquidityCallback`
             if (shares0 < shares1) {
                 shares = shares0;
-                amount1 = Math.mulDiv(
-                    reserve1,
-                    shares,
-                    totalSupplyCache,
-                    Math.Rounding.Ceil
-                );
+                amount1 = Math.mulDiv(reserve1, shares, totalSupplyCache, Math.Rounding.Ceil);
                 amount0 = _amount0;
             } else {
                 shares = shares1;
-                amount0 = Math.mulDiv(
-                    reserve0,
-                    shares,
-                    totalSupplyCache,
-                    Math.Rounding.Ceil
-                );
+                amount0 = Math.mulDiv(reserve0, shares, totalSupplyCache, Math.Rounding.Ceil);
                 amount1 = _amount1;
             }
 
@@ -204,13 +184,7 @@ contract Validly is IValidly, ERC20, ReentrancyGuard {
 
         _mint(_recipient, shares);
 
-        (amount0, amount1) = pool.depositLiquidity(
-            amount0,
-            amount1,
-            msg.sender,
-            "",
-            abi.encode(msg.sender)
-        );
+        (amount0, amount1) = pool.depositLiquidity(amount0, amount1, msg.sender, "", abi.encode(msg.sender));
     }
 
     /**
@@ -223,13 +197,7 @@ contract Validly is IValidly, ERC20, ReentrancyGuard {
      * @return amount0 Amount of token0 withdrawn. WARNING: Potentially innacurate in case token0 is rebase.
      * @return amount1 Amount of token1 withdrawn. WARNING: Potentially innacurate in case token1 is rebase.
      */
-    function withdraw(
-        uint256 _shares,
-        uint256 _amount0Min,
-        uint256 _amount1Min,
-        uint256 _deadline,
-        address _recipient
-    )
+    function withdraw(uint256 _shares, uint256 _amount0Min, uint256 _amount1Min, uint256 _deadline, address _recipient)
         external
         override
         ensureDeadline(_deadline)
@@ -266,27 +234,19 @@ contract Validly is IValidly, ERC20, ReentrancyGuard {
     /**
      * @notice Callback to transfer tokens from user into `pool` during deposits.
      */
-    function onDepositLiquidityCallback(
-        uint256 _amount0,
-        uint256 _amount1,
-        bytes memory _data
-    ) external override onlyPool {
+    function onDepositLiquidityCallback(uint256 _amount0, uint256 _amount1, bytes memory _data)
+        external
+        override
+        onlyPool
+    {
         address user = abi.decode(_data, (address));
 
         if (_amount0 > 0) {
-            IERC20Metadata(pool.token0()).safeTransferFrom(
-                user,
-                msg.sender,
-                _amount0
-            );
+            IERC20Metadata(pool.token0()).safeTransferFrom(user, msg.sender, _amount0);
         }
 
         if (_amount1 > 0) {
-            IERC20Metadata(pool.token1()).safeTransferFrom(
-                user,
-                msg.sender,
-                _amount1
-            );
+            IERC20Metadata(pool.token1()).safeTransferFrom(user, msg.sender, _amount1);
         }
     }
 
@@ -297,7 +257,7 @@ contract Validly is IValidly, ERC20, ReentrancyGuard {
      */
     function getLiquidityQuote(
         ALMLiquidityQuoteInput memory _poolInput,
-        bytes calldata /*_externalContext*/,
+        bytes calldata, /*_externalContext*/
         bytes calldata /*_verifierData*/
     ) external override onlyPool returns (ALMLiquidityQuote memory quote) {
         if (_poolInput.feeInBips == 0) {
@@ -306,39 +266,24 @@ contract Validly is IValidly, ERC20, ReentrancyGuard {
 
         (uint256 reserve0, uint256 reserve1) = pool.getReserves();
 
-        (uint256 reserveIn, uint256 reserveOut) = _poolInput.isZeroToOne
-            ? (reserve0, reserve1)
-            : (reserve1, reserve0);
+        (uint256 reserveIn, uint256 reserveOut) = _poolInput.isZeroToOne ? (reserve0, reserve1) : (reserve1, reserve0);
 
         uint256 invariant;
         if (isStable) {
             invariant = _stableInvariant(reserve0, reserve1);
             // Scale reserves and amounts to 18 decimals
-            reserveIn = _poolInput.isZeroToOne
-                ? (reserveIn * 1e18) / decimals0
-                : (reserveIn * 1e18) / decimals1;
-            reserveOut = _poolInput.isZeroToOne
-                ? (reserveOut * 1e18) / decimals1
-                : (reserveOut * 1e18) / decimals0;
+            reserveIn = _poolInput.isZeroToOne ? (reserveIn * 1e18) / decimals0 : (reserveIn * 1e18) / decimals1;
+            reserveOut = _poolInput.isZeroToOne ? (reserveOut * 1e18) / decimals1 : (reserveOut * 1e18) / decimals0;
             uint256 amountIn = _poolInput.isZeroToOne
                 ? (_poolInput.amountInMinusFee * 1e18) / decimals0
                 : (_poolInput.amountInMinusFee * 1e18) / decimals1;
-            uint256 amountOut = reserveOut -
-                _get_y_stableInvariant(
-                    amountIn + reserveIn,
-                    invariant,
-                    reserveOut
-                );
+            uint256 amountOut = reserveOut - _get_y_stableInvariant(amountIn + reserveIn, invariant, reserveOut);
 
-            quote.amountOut =
-                (amountOut * (_poolInput.isZeroToOne ? decimals1 : decimals0)) /
-                1e18;
+            quote.amountOut = (amountOut * (_poolInput.isZeroToOne ? decimals1 : decimals0)) / 1e18;
         } else {
             invariant = reserve0 * reserve1;
 
-            quote.amountOut =
-                (reserveOut * _poolInput.amountInMinusFee) /
-                (reserveIn + _poolInput.amountInMinusFee);
+            quote.amountOut = (reserveOut * _poolInput.amountInMinusFee) / (reserveIn + _poolInput.amountInMinusFee);
         }
 
         _cacheInvariant(invariant);
@@ -360,9 +305,7 @@ contract Validly is IValidly, ERC20, ReentrancyGuard {
     ) external override onlyPool {
         (uint256 reserve0, uint256 reserve1) = pool.getReserves();
 
-        uint256 invariant = isStable
-            ? _stableInvariant(reserve0, reserve1)
-            : reserve0 * reserve1;
+        uint256 invariant = isStable ? _stableInvariant(reserve0, reserve1) : reserve0 * reserve1;
 
         if (invariant < _getCachedInvariant()) {
             revert Validly__onSwapCallback_invariantViolated();
@@ -396,10 +339,7 @@ contract Validly is IValidly, ERC20, ReentrancyGuard {
         }
     }
 
-    function _stableInvariant(
-        uint256 x,
-        uint256 y
-    ) private view returns (uint256) {
+    function _stableInvariant(uint256 x, uint256 y) private view returns (uint256) {
         uint256 _x = (x * 1e18) / decimals0;
         uint256 _y = (y * 1e18) / decimals1;
         uint256 _a = (_x * _y) / 1e18;
@@ -415,25 +355,14 @@ contract Validly is IValidly, ERC20, ReentrancyGuard {
     }
 
     function _f(uint256 x0, uint256 y) private pure returns (uint256) {
-        return
-            (x0 * ((((y * y) / 1e18) * y) / 1e18)) /
-            1e18 +
-            (((((x0 * x0) / 1e18) * x0) / 1e18) * y) /
-            1e18;
+        return (x0 * ((((y * y) / 1e18) * y) / 1e18)) / 1e18 + (((((x0 * x0) / 1e18) * x0) / 1e18) * y) / 1e18;
     }
 
     function _d(uint256 x0, uint256 y) private pure returns (uint256) {
-        return
-            (3 * x0 * ((y * y) / 1e18)) /
-            1e18 +
-            ((((x0 * x0) / 1e18) * x0) / 1e18);
+        return (3 * x0 * ((y * y) / 1e18)) / 1e18 + ((((x0 * x0) / 1e18) * x0) / 1e18);
     }
 
-    function _get_y_stableInvariant(
-        uint256 x0,
-        uint256 invariant,
-        uint256 y
-    ) private pure returns (uint256) {
+    function _get_y_stableInvariant(uint256 x0, uint256 invariant, uint256 y) private pure returns (uint256) {
         for (uint256 i = 0; i < 255; i++) {
             uint256 y_prev = y;
             uint256 k = _f(x0, y);
