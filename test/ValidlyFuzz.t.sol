@@ -403,6 +403,8 @@ contract ValidlyFuzzTest is Test {
 
         vm.revertTo(snapshot);
 
+        // This mocks the effect of tokenIn being rebase,
+        // transferring 10 units less than the expected amount
         uint256 k_post = isZeroToOne
             ? _stableInvariant(
                 reserve0 + amountIn - 10,

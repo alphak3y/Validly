@@ -6,16 +6,17 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {ISovereignALM} from "@valantis-core/ALM/interfaces/ISovereignALM.sol";
 import {ALMLiquidityQuoteInput, ALMLiquidityQuote} from "@valantis-core/ALM/structs/SovereignALMStructs.sol";
 import {ISovereignPool} from "@valantis-core/pools/interfaces/ISovereignPool.sol";
+
+import {IValidly} from "./interfaces/IValidly.sol";
 
 /**
  * @title Validly Liquidity Module.
  * @dev UniswapV2 style constant product and Solidly's stable invariant,
  *      implemented as a Valantis Sovereign Liquidity Module.
  */
-contract Validly is ISovereignALM, ERC20, ReentrancyGuard {
+contract Validly is IValidly, ERC20, ReentrancyGuard {
     using SafeERC20 for IERC20Metadata;
 
     /**
@@ -142,6 +143,7 @@ contract Validly is ISovereignALM, ERC20, ReentrancyGuard {
         address _recipient
     )
         external
+        override
         ensureDeadline(_deadline)
         nonReentrant
         returns (uint256 shares, uint256 amount0, uint256 amount1)
@@ -229,6 +231,7 @@ contract Validly is ISovereignALM, ERC20, ReentrancyGuard {
         address _recipient
     )
         external
+        override
         ensureDeadline(_deadline)
         nonReentrant
         returns (uint256 amount0, uint256 amount1)

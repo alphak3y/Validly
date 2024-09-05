@@ -221,6 +221,10 @@ contract ValidlyTest is Test {
         ALMLiquidityQuoteInput memory input;
         input.amountInMinusFee = 1 ether;
         input.isZeroToOne = true;
+
+        vm.expectRevert(Validly.Validly__onlyPool.selector);
+        volatilePair.getLiquidityQuote(input, "", "");
+
         vm.prank(address(volatilePool));
         vm.expectRevert(
             Validly.Validly__getLiquidityQuote_feeInBipsZero.selector
@@ -274,9 +278,9 @@ contract ValidlyTest is Test {
         assertEq(token1.balanceOf(address(volatilePool)), 1 ether);
     }
 
-    function test_onSwapCallback() public {
+    function test_onSwapCallback_stable() public {
         vm.expectRevert(Validly.Validly__onlyPool.selector);
-        volatilePair.onSwapCallback(false, 0, 0);
+        stablePair.onSwapCallback(false, 0, 0);
 
         vm.mockCall(
             address(stablePair),
@@ -310,5 +314,43 @@ contract ValidlyTest is Test {
             Validly.Validly__onSwapCallback_invariantViolated.selector
         );
         stablePair.onSwapCallback(true, 5e17, 5e17);
+    }
+
+    function test_onSwapCallback_volatile() public {
+        vm.expectRevert(Validly.Validly__onlyPool.selector);
+        volatilePair.onSwapCallback(false, 0, 0);
+
+        vm.mockCall(
+            address(volatilePair),
+            abi.encodeWithSelector(ISovereignPool.getReserves.selector),
+            abi.encode(1 ether, 1 ether)
+        );
+
+        vm.prank(address(volatilePool));
+        volatilePair.onSwapCallback(true, 1 ether, 1 ether);
+
+        vm.mockCall(
+            address(volatilePool),
+            abi.encodeWithSelector(ISovereignPool.getReserves.selector),
+            abi.encode(1 ether, 1 ether)
+        );
+
+        vm.prank(address(volatilePool));
+        ALMLiquidityQuoteInput memory input;
+        input.amountInMinusFee = 1 ether;
+        input.isZeroToOne = true;
+        input.feeInBips = 1;
+        volatilePair.getLiquidityQuote(input, "", "");
+
+        vm.prank(address(volatilePool));
+        vm.mockCall(
+            address(volatilePool),
+            abi.encodeWithSelector(ISovereignPool.getReserves.selector),
+            abi.encode(5e17, 5e17)
+        );
+        vm.expectRevert(
+            Validly.Validly__onSwapCallback_invariantViolated.selector
+        );
+        volatilePair.onSwapCallback(true, 5e17, 5e17);
     }
 }
