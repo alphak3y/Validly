@@ -88,8 +88,14 @@ contract ValidlyFactory is IValidlyFactory {
      * @custom:error ValidlyFactory__createPair_failedDeployment Thrown if the Validly contract deployment fails.
      * @custom:error ValidlyFactory__createPair_invalidFeeBips Thrown if the feeBips is not between 0 and 10000.
      */
-    function createPair(address _token0, address _token1, bool _isStable) external returns (address) {
-        (_token0, _token1) = _token0 < _token1 ? (_token0, _token1) : (_token1, _token0);
+    function createPair(
+        address _token0,
+        address _token1,
+        bool _isStable
+    ) external returns (address) {
+        (_token0, _token1) = _token0 < _token1
+            ? (_token0, _token1)
+            : (_token1, _token0);
 
         bytes32 poolKey = _poolKey(_token0, _token1, _isStable);
 
@@ -113,7 +119,7 @@ contract ValidlyFactory is IValidlyFactory {
 
         address pool = protocolFactory.deploySovereignPool(args);
 
-        Validly validly = new Validly(pool, _isStable);
+        Validly validly = new Validly{salt: poolKey}(pool, _isStable);
 
         ISovereignPool(pool).setALM(address(validly));
 
@@ -131,7 +137,10 @@ contract ValidlyFactory is IValidlyFactory {
      * @param _isStable Boolean indicating if the pool should be stable or volatile.
      * @custom:error ValidlyFactory__createPool_failedDeployment Thrown if the Validly contract deployment fails.
      */
-    function createPool(SovereignPoolConstructorArgs memory _args, bool _isStable) external returns (address validly) {
+    function createPool(
+        SovereignPoolConstructorArgs memory _args,
+        bool _isStable
+    ) external returns (address validly) {
         _args.poolManager = address(this);
 
         address pool = protocolFactory.deploySovereignPool(_args);
@@ -150,7 +159,10 @@ contract ValidlyFactory is IValidlyFactory {
      * @param _feeBips The fee percentage for the pool manager.
      * @custom:error ValidlyFactory__setPoolManagerFees_unauthorized Thrown if the caller is not the protocol manager.
      */
-    function setPoolManagerFeeBips(address _pool, uint256 _feeBips) external onlyProtocolManager {
+    function setPoolManagerFeeBips(
+        address _pool,
+        uint256 _feeBips
+    ) external onlyProtocolManager {
         ISovereignPool(_pool).setPoolManagerFeeBips(_feeBips);
 
         emit PoolManagerFeeBipsSet(_pool, _feeBips);
@@ -163,7 +175,10 @@ contract ValidlyFactory is IValidlyFactory {
      * @param _token The address of the token to claim.
      * @param _recipient The address of the recipient.
      */
-    function claimTokens(address _token, address _recipient) external onlyProtocolManager {
+    function claimTokens(
+        address _token,
+        address _recipient
+    ) external onlyProtocolManager {
         if (_token == address(0)) {
             revert ValidlyFactory__claimTokens_invalidToken();
         }
@@ -196,7 +211,11 @@ contract ValidlyFactory is IValidlyFactory {
     /**
      *  PRIVATE FUNCTIONS
      */
-    function _poolKey(address token0, address token1, bool isStable) private pure returns (bytes32 key) {
+    function _poolKey(
+        address token0,
+        address token1,
+        bool isStable
+    ) private pure returns (bytes32 key) {
         key = keccak256(abi.encode(token0, token1, isStable));
     }
 }
