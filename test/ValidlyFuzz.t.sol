@@ -78,18 +78,18 @@ contract ValidlyFuzzTest is Test {
 
             if (expectedShares < 1000) {
                 vm.expectRevert(stdError.arithmeticError);
-                volatilePair.deposit(amount0, amount1, 0, block.timestamp + 1, address(1));
+                volatilePair.deposit(amount0, amount1, 0, block.timestamp + 1, address(1), "");
                 return;
             }
 
             if (amount0 == 0 || amount1 == 0 || expectedShares == 1000) {
                 vm.expectRevert(Validly.Validly__deposit_zeroShares.selector);
-                volatilePair.deposit(amount0, amount1, 0, block.timestamp + 1, address(1));
+                volatilePair.deposit(amount0, amount1, 0, block.timestamp + 1, address(1), "");
                 return;
             }
 
             (uint256 shares, uint256 amount0Deposited, uint256 amount1Deposited) =
-                volatilePair.deposit(amount0, amount1, 0, block.timestamp + 1, address(1));
+                volatilePair.deposit(amount0, amount1, 0, block.timestamp + 1, address(1), "");
 
             assertEq(amount0Deposited, amount0);
             assertEq(amount1Deposited, amount1);
@@ -99,12 +99,12 @@ contract ValidlyFuzzTest is Test {
                 Math.min(Math.mulDiv(amount0, totalSupply, reserve0), Math.mulDiv(amount1, totalSupply, reserve1));
             if (amount0 == 0 || amount1 == 0 || expectedShares == 0) {
                 vm.expectRevert(Validly.Validly__deposit_zeroShares.selector);
-                volatilePair.deposit(amount0, amount1, 0, block.timestamp + 1, address(1));
+                volatilePair.deposit(amount0, amount1, 0, block.timestamp + 1, address(1), "");
                 return;
             }
 
             (uint256 shares, uint256 amount0Deposited, uint256 amount1Deposited) =
-                volatilePair.deposit(amount0, amount1, 0, block.timestamp + 1, address(1));
+                volatilePair.deposit(amount0, amount1, 0, block.timestamp + 1, address(1), "");
 
             assertLe(amount0Deposited, amount0);
             assertLe(amount1Deposited, amount1);
@@ -130,13 +130,13 @@ contract ValidlyFuzzTest is Test {
 
         if (shares == 0) {
             vm.expectRevert(Validly.Validly__withdraw_zeroShares.selector);
-            volatilePair.withdraw(shares, 0, 0, block.timestamp + 1, address(this));
+            volatilePair.withdraw(shares, 0, 0, block.timestamp + 1, address(this), "");
             return;
         }
 
         if (totalSupply == 0) {
             vm.expectRevert(stdError.divisionError);
-            volatilePair.withdraw(shares, 0, 0, block.timestamp + 1, address(this));
+            volatilePair.withdraw(shares, 0, 0, block.timestamp + 1, address(this), "");
             return;
         }
 
@@ -145,11 +145,11 @@ contract ValidlyFuzzTest is Test {
 
         if (expectedAmount0 == 0 || expectedAmount1 == 0) {
             vm.expectRevert(Validly.Validly__withdraw_AmountZero.selector);
-            volatilePair.withdraw(shares, 0, 0, block.timestamp + 1, address(this));
+            volatilePair.withdraw(shares, 0, 0, block.timestamp + 1, address(this), "");
             return;
         }
 
-        (uint256 amount0, uint256 amount1) = volatilePair.withdraw(shares, 0, 0, block.timestamp + 1, address(this));
+        (uint256 amount0, uint256 amount1) = volatilePair.withdraw(shares, 0, 0, block.timestamp + 1, address(this), "");
 
         assertEq(amount0, expectedAmount0);
         assertEq(amount1, expectedAmount1);
