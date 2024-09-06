@@ -118,6 +118,12 @@ contract ValidlyFactoryTest is Test {
         vm.prank(ALICE);
         factory.claimTokens(address(token0), ALICE);
 
+        vm.expectRevert(ValidlyFactory.ValidlyFactory__claimTokens_invalidToken.selector);
+        factory.claimTokens(address(0), ALICE);
+
+        vm.expectRevert(ValidlyFactory.ValidlyFactory__claimTokens_invalidRecipient.selector);
+        factory.claimTokens(address(token0), address(0));
+
         factory.claimTokens(address(token0), ALICE);
 
         assertEq(token0.balanceOf(ALICE), 1e18);

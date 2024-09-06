@@ -3,6 +3,7 @@ pragma solidity 0.8.24;
 
 import {stdError} from "forge-std/StdError.sol";
 import {Test} from "forge-std/Test.sol";
+
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ProtocolFactory} from "@valantis-core/protocol-factory/ProtocolFactory.sol";
@@ -208,7 +209,7 @@ contract ValidlyFuzzTest is Test {
     function test_swap_stable(uint256 reserve, uint256 amountIn, bool isZeroToOne) public {
         uint256 reserve0 = bound(reserve, 1e18, 1e26);
         uint256 reserve1 = reserve0;
-        amountIn = bound(amountIn, 1000, 1e26);
+        amountIn = bound(amountIn, 3, 1e26);
 
         token0.mint(stablePool, reserve0);
         token1.mint(stablePool, reserve1);
@@ -248,7 +249,7 @@ contract ValidlyFuzzTest is Test {
     function test_swap_stable_rebase(uint256 reserve, uint256 amountIn, bool isZeroToOne) public {
         uint256 reserve0 = bound(reserve, 1e18, 1e26);
         uint256 reserve1 = reserve0;
-        amountIn = bound(amountIn, 1000, 1e26);
+        amountIn = bound(amountIn, 1e18, 1e26);
 
         token0.mint(stablePool, reserve0);
         token1.mint(stablePool, reserve1);
@@ -276,11 +277,35 @@ contract ValidlyFuzzTest is Test {
 
         uint256 k_pre = _stableInvariant(reserve0, reserve1);
 
+        uint256 snapshot = vm.snapshot();
+
+        vm.prank(address(stablePool));
+        ALMLiquidityQuoteInput memory poolInput;
+        poolInput.isZeroToOne = isZeroToOne;
+        poolInput.feeInBips = 1;
+        poolInput.amountInMinusFee = Math.mulDiv(amountIn, 10000, 10001);
+
+        ALMLiquidityQuote memory quote = stablePair.getLiquidityQuote(poolInput, "", "");
+
+        vm.revertTo(snapshot);
+
+        // This mocks the effect of tokenIn being rebase,
+        // transferring 10 units less than the expected amount
+        uint256 k_post = isZeroToOne
+            ? _stableInvariant(reserve0 + amountIn - 10, reserve1 - quote.amountOut)
+            : _stableInvariant(reserve0 - quote.amountOut, reserve1 + amountIn - 10);
+
+        if (k_post < k_pre) {
+            vm.expectRevert(Validly.Validly__onSwapCallback_invariantViolated.selector);
+            ISovereignPool(stablePool).swap(params);
+            return;
+        }
+
         (uint256 amountInUsed, uint256 amountOut) = ISovereignPool(stablePool).swap(params);
 
-        uint256 k_post = isZeroToOne
-            ? _stableInvariant(reserve0 + amountInUsed - 10, reserve1 + amountOut + 10)
-            : _stableInvariant(reserve0 + amountOut + 10, reserve1 + amountInUsed - 10);
+        k_post = isZeroToOne
+            ? _stableInvariant(reserve0 + amountInUsed - 10, reserve1 - amountOut)
+            : _stableInvariant(reserve0 - amountOut, reserve1 + amountInUsed - 10);
 
         assertGe(k_post, k_pre);
     }
@@ -290,6 +315,6 @@ contract ValidlyFuzzTest is Test {
         uint256 _y = y;
         uint256 _a = (_x * _y) / 1e18;
         uint256 _b = ((_x * _x) / 1e18 + (_y * _y) / 1e18);
-        return _a * _b / 1e18; // x3y+y3x >= k
+        return (_a * _b) / 1e18; // x3y+y3x >= k
     }
 }

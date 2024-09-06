@@ -158,6 +158,10 @@ contract ValidlyTest is Test {
         ALMLiquidityQuoteInput memory input;
         input.amountInMinusFee = 1 ether;
         input.isZeroToOne = true;
+
+        vm.expectRevert(Validly.Validly__onlyPool.selector);
+        volatilePair.getLiquidityQuote(input, "", "");
+
         vm.prank(address(volatilePool));
         vm.expectRevert(Validly.Validly__getLiquidityQuote_feeInBipsZero.selector);
         volatilePair.getLiquidityQuote(input, "", "");
@@ -201,7 +205,73 @@ contract ValidlyTest is Test {
 
         assertEq(token0.balanceOf(address(volatilePool)), 1 ether);
         assertEq(token1.balanceOf(address(volatilePool)), 1 ether);
+    }
 
+    function test_onSwapCallback_stable() public {
+        vm.expectRevert(Validly.Validly__onlyPool.selector);
+        stablePair.onSwapCallback(false, 0, 0);
+
+        vm.mockCall(
+            address(stablePair),
+            abi.encodeWithSelector(ISovereignPool.getReserves.selector),
+            abi.encode(1 ether, 1 ether)
+        );
+
+        vm.prank(address(stablePool));
+        stablePair.onSwapCallback(true, 1 ether, 1 ether);
+
+        vm.mockCall(
+            address(stablePool),
+            abi.encodeWithSelector(ISovereignPool.getReserves.selector),
+            abi.encode(1 ether, 1 ether)
+        );
+
+        vm.prank(address(stablePool));
+        ALMLiquidityQuoteInput memory input;
+        input.amountInMinusFee = 1 ether;
+        input.isZeroToOne = true;
+        input.feeInBips = 1;
+        stablePair.getLiquidityQuote(input, "", "");
+
+        vm.prank(address(stablePool));
+        vm.mockCall(
+            address(stablePool), abi.encodeWithSelector(ISovereignPool.getReserves.selector), abi.encode(5e17, 5e17)
+        );
+        vm.expectRevert(Validly.Validly__onSwapCallback_invariantViolated.selector);
+        stablePair.onSwapCallback(true, 5e17, 5e17);
+    }
+
+    function test_onSwapCallback_volatile() public {
+        vm.expectRevert(Validly.Validly__onlyPool.selector);
+        volatilePair.onSwapCallback(false, 0, 0);
+
+        vm.mockCall(
+            address(volatilePair),
+            abi.encodeWithSelector(ISovereignPool.getReserves.selector),
+            abi.encode(1 ether, 1 ether)
+        );
+
+        vm.prank(address(volatilePool));
         volatilePair.onSwapCallback(true, 1 ether, 1 ether);
+
+        vm.mockCall(
+            address(volatilePool),
+            abi.encodeWithSelector(ISovereignPool.getReserves.selector),
+            abi.encode(1 ether, 1 ether)
+        );
+
+        vm.prank(address(volatilePool));
+        ALMLiquidityQuoteInput memory input;
+        input.amountInMinusFee = 1 ether;
+        input.isZeroToOne = true;
+        input.feeInBips = 1;
+        volatilePair.getLiquidityQuote(input, "", "");
+
+        vm.prank(address(volatilePool));
+        vm.mockCall(
+            address(volatilePool), abi.encodeWithSelector(ISovereignPool.getReserves.selector), abi.encode(5e17, 5e17)
+        );
+        vm.expectRevert(Validly.Validly__onSwapCallback_invariantViolated.selector);
+        volatilePair.onSwapCallback(true, 5e17, 5e17);
     }
 }
