@@ -68,13 +68,13 @@ contract ValidlyTest is Test {
         vm.warp(block.timestamp + 1);
 
         vm.expectRevert(Validly.Validly__deadlineExpired.selector);
-        volatilePair.deposit(10 ether, 0, 0, block.timestamp - 1, address(0));
+        volatilePair.deposit(10 ether, 0, 0, block.timestamp - 1, address(0), "");
 
         vm.expectRevert(Validly.Validly__deposit_invalidRecipient.selector);
-        volatilePair.deposit(10 ether, 0, 0, block.timestamp + 1, address(0));
+        volatilePair.deposit(10 ether, 0, 0, block.timestamp + 1, address(0), "");
 
         vm.expectRevert(Validly.Validly__deposit_lessThanMinShares.selector);
-        volatilePair.deposit(10000, 10000, 10000, block.timestamp + 1, address(this));
+        volatilePair.deposit(10000, 10000, 10000, block.timestamp + 1, address(this), "");
 
         token0.mint(address(this), 1000 ether);
         token1.mint(address(this), 1000 ether);
@@ -82,12 +82,12 @@ contract ValidlyTest is Test {
         token0.approve(address(volatilePair), 1000 ether);
         token1.approve(address(volatilePair), 1000 ether);
 
-        volatilePair.deposit(1 ether, 10 ether, 0, block.timestamp + 1, address(this));
+        volatilePair.deposit(1 ether, 10 ether, 0, block.timestamp + 1, address(this), "");
 
-        volatilePair.deposit(1 ether, 20 ether, 0, block.timestamp + 1, address(this));
+        volatilePair.deposit(1 ether, 20 ether, 0, block.timestamp + 1, address(this), "");
 
         vm.expectRevert(Validly.Validly__deposit_zeroShares.selector);
-        volatilePair.deposit(1 ether, 0, 0, block.timestamp + 1, address(this));
+        volatilePair.deposit(1 ether, 0, 0, block.timestamp + 1, address(this), "");
     }
 
     function test_withdraw() public {
@@ -96,13 +96,13 @@ contract ValidlyTest is Test {
         uint256 shares = volatilePair.balanceOf(address(this));
 
         vm.expectRevert(Validly.Validly__deadlineExpired.selector);
-        volatilePair.withdraw(shares, 0, 0, block.timestamp - 1, address(0));
+        volatilePair.withdraw(shares, 0, 0, block.timestamp - 1, address(0), "");
 
         vm.expectRevert(Validly.Validly__withdraw_zeroShares.selector);
-        volatilePair.withdraw(0, 0, 0, block.timestamp + 1, address(this));
+        volatilePair.withdraw(0, 0, 0, block.timestamp + 1, address(this), "");
 
         vm.expectRevert(Validly.Validly__withdraw_invalidRecipient.selector);
-        volatilePair.withdraw(shares, 0, 0, block.timestamp + 1, address(0));
+        volatilePair.withdraw(shares, 0, 0, block.timestamp + 1, address(0), "");
 
         uint256 sharesToWithdraw = shares / 2;
 
@@ -111,16 +111,16 @@ contract ValidlyTest is Test {
         uint256 expectedAmount1 = Math.mulDiv(reserve1, sharesToWithdraw, volatilePair.totalSupply());
 
         vm.expectRevert(Validly.Validly__withdraw_AmountZero.selector);
-        volatilePair.withdraw(1, 0, 0, block.timestamp + 1, address(this));
+        volatilePair.withdraw(1, 0, 0, block.timestamp + 1, address(this), "");
 
         vm.expectRevert(Validly.Validly__withdraw_insufficientToken0Withdrawn.selector);
-        volatilePair.withdraw(sharesToWithdraw, 100 ether, 0, block.timestamp + 1, address(this));
+        volatilePair.withdraw(sharesToWithdraw, 100 ether, 0, block.timestamp + 1, address(this), "");
 
         vm.expectRevert(Validly.Validly__withdraw_insufficientToken1Withdrawn.selector);
-        volatilePair.withdraw(sharesToWithdraw, 0, 100 ether, block.timestamp + 1, address(this));
+        volatilePair.withdraw(sharesToWithdraw, 0, 100 ether, block.timestamp + 1, address(this), "");
 
         (uint256 amount0, uint256 amount1) =
-            volatilePair.withdraw(sharesToWithdraw, 0, 0, block.timestamp + 1, address(this));
+            volatilePair.withdraw(sharesToWithdraw, 0, 0, block.timestamp + 1, address(this), "");
 
         assertEq(amount0, expectedAmount0);
         assertEq(amount1, expectedAmount1);
@@ -133,7 +133,7 @@ contract ValidlyTest is Test {
         token0.approve(address(stablePair), 1000 ether);
         token1.approve(address(stablePair), 1000 ether);
 
-        stablePair.deposit(100 ether, 100 ether, 0, block.timestamp + 1, address(this));
+        stablePair.deposit(100 ether, 100 ether, 0, block.timestamp + 1, address(this), "");
 
         SovereignPoolSwapParams memory params;
 

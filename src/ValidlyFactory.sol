@@ -133,6 +133,8 @@ contract ValidlyFactory is IValidlyFactory {
      */
     function createPool(SovereignPoolConstructorArgs memory _args, bool _isStable) external returns (address validly) {
         _args.poolManager = address(this);
+        // This factory does not support Sovereign Pools with Verifier Modules
+        _args.verifierModule = address(0);
 
         address pool = protocolFactory.deploySovereignPool(_args);
 

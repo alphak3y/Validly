@@ -17,11 +17,21 @@ interface IValidly is ISovereignALM {
 
     function decimals1() external view returns (uint256);
 
-    function deposit(uint256 _amount0, uint256 _amount1, uint256 _minShares, uint256 _deadline, address _recipient)
-        external
-        returns (uint256 shares, uint256 amount0, uint256 amount1);
+    function deposit(
+        uint256 _amount0,
+        uint256 _amount1,
+        uint256 _minShares,
+        uint256 _deadline,
+        address _recipient,
+        bytes calldata _verificationContext
+    ) external returns (uint256 shares, uint256 amount0, uint256 amount1);
 
-    function withdraw(uint256 _shares, uint256 _amount0Min, uint256 _amount1Min, uint256 _deadline, address _recipient)
-        external
-        returns (uint256 amount0, uint256 amount1);
+    function withdraw(
+        uint256 _shares,
+        uint256 _amount0Min,
+        uint256 _amount1Min,
+        uint256 _deadline,
+        address _recipient,
+        bytes calldata _verificationContext
+    ) external returns (uint256 amount0, uint256 amount1);
 }

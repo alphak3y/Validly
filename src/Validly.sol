@@ -129,9 +129,17 @@ contract Validly is IValidly, ERC20, ReentrancyGuard {
      * @param _minShares Minimum amount of shares to mint.
      * @param _deadline Block timestamp after which this call reverts.
      * @param _recipient Address to mint LP tokens for.
+     * @param _verificationContext Bytes encoded payload, in case `pool` has a Verifier Module.
      * @return shares Amount of shares minted.
      */
-    function deposit(uint256 _amount0, uint256 _amount1, uint256 _minShares, uint256 _deadline, address _recipient)
+    function deposit(
+        uint256 _amount0,
+        uint256 _amount1,
+        uint256 _minShares,
+        uint256 _deadline,
+        address _recipient,
+        bytes calldata _verificationContext
+    )
         external
         override
         ensureDeadline(_deadline)
@@ -184,7 +192,8 @@ contract Validly is IValidly, ERC20, ReentrancyGuard {
 
         _mint(_recipient, shares);
 
-        (amount0, amount1) = pool.depositLiquidity(amount0, amount1, msg.sender, "", abi.encode(msg.sender));
+        (amount0, amount1) =
+            pool.depositLiquidity(amount0, amount1, msg.sender, _verificationContext, abi.encode(msg.sender));
     }
 
     /**
@@ -194,16 +203,18 @@ contract Validly is IValidly, ERC20, ReentrancyGuard {
      * @param _amount1Min Minimum amount of token1 required for `_recipient`.
      * @param _deadline Block timestamp after which this call reverts.
      * @param _recipient Address to receive token0 and token1 amounts.
+     * @param _verificationContext Bytes encoded payload, in case `pool` has a Verifier Module.
      * @return amount0 Amount of token0 withdrawn. WARNING: Potentially innacurate in case token0 is rebase.
      * @return amount1 Amount of token1 withdrawn. WARNING: Potentially innacurate in case token1 is rebase.
      */
-    function withdraw(uint256 _shares, uint256 _amount0Min, uint256 _amount1Min, uint256 _deadline, address _recipient)
-        external
-        override
-        ensureDeadline(_deadline)
-        nonReentrant
-        returns (uint256 amount0, uint256 amount1)
-    {
+    function withdraw(
+        uint256 _shares,
+        uint256 _amount0Min,
+        uint256 _amount1Min,
+        uint256 _deadline,
+        address _recipient,
+        bytes calldata _verificationContext
+    ) external override ensureDeadline(_deadline) nonReentrant returns (uint256 amount0, uint256 amount1) {
         if (_shares == 0) revert Validly__withdraw_zeroShares();
 
         if (_recipient == address(0)) {
@@ -228,7 +239,7 @@ contract Validly is IValidly, ERC20, ReentrancyGuard {
 
         _burn(msg.sender, _shares);
 
-        pool.withdrawLiquidity(amount0, amount1, msg.sender, _recipient, "");
+        pool.withdrawLiquidity(amount0, amount1, msg.sender, _recipient, _verificationContext);
     }
 
     /**
