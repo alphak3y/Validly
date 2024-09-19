@@ -70,9 +70,6 @@ contract ValidlyTest is Test {
         vm.expectRevert(Validly.Validly__deadlineExpired.selector);
         volatilePair.deposit(10 ether, 0, 0, block.timestamp - 1, address(0), "");
 
-        vm.expectRevert(Validly.Validly__deposit_invalidRecipient.selector);
-        volatilePair.deposit(10 ether, 0, 0, block.timestamp + 1, address(0), "");
-
         vm.expectRevert(Validly.Validly__deposit_lessThanMinShares.selector);
         volatilePair.deposit(10000, 10000, 10000, block.timestamp + 1, address(this), "");
 

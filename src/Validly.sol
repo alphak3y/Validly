@@ -26,12 +26,10 @@ contract Validly is IValidly, ERC20, ReentrancyGuard {
      */
     error Validly__deadlineExpired();
     error Validly__onlyPool();
-    error Validly__priceOutOfRange();
     error Validly__constructor_customSovereignVaultNotAllowed();
     error Validly__constructor_invalidPool();
     error Validly__deposit_insufficientToken0Deposited();
     error Validly__deposit_insufficientToken1Deposited();
-    error Validly__deposit_invalidRecipient();
     error Validly__deposit_lessThanMinShares();
     error Validly__deposit_zeroShares();
     error Validly__getLiquidityQuote_feeInBipsZero();
@@ -146,10 +144,6 @@ contract Validly is IValidly, ERC20, ReentrancyGuard {
         nonReentrant
         returns (uint256 shares, uint256 amount0, uint256 amount1)
     {
-        if (_recipient == address(0)) {
-            revert Validly__deposit_invalidRecipient();
-        }
-
         uint256 totalSupplyCache = totalSupply();
         if (totalSupplyCache == 0) {
             // Minimum token amounts taken as amounts during first deposit
@@ -394,7 +388,7 @@ contract Validly is IValidly, ERC20, ReentrancyGuard {
                 }
             }
         }
-        // Did not converge in 256 fixed point iterations,
+        // Did not converge in 255 fixed point iterations,
         // revert for safety
         revert Validly___get_y_notConverged();
     }
