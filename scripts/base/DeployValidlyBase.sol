@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.0;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.24;
 
 import {Script} from 'forge-std/Script.sol';
 import 'forge-std/StdJson.sol';
@@ -14,28 +14,26 @@ import {ValidlyFactory} from "src/ValidlyFactory.sol";
 abstract contract DeployValidlyBase is Script {
   using stdJson for string;
 
-  ValidlyFactory public factory;
+  mapping(uint256 feeBips => ValidlyFactory factory) validlyFactories;
   ProtocolFactory protocolFactory;
   SovereignPoolFactory poolFactory;
 
-  function _deployFactory() public {
+  function _deployFactories(uint256[] memory feeTiers) public {
     protocolFactory = new ProtocolFactory(vm.envAddress('SENDER'));
 
     poolFactory = new SovereignPoolFactory();
 
     protocolFactory.setSovereignPoolFactory(address(poolFactory));
 
-    // Create ValidlyFactory
-    factory = new ValidlyFactory(address(protocolFactory), 1);
+    // create a factory for each fee tier
+    for (uint256 i = 0; i < feeTiers.length; ) {
+        validlyFactories[feeTiers[i]] = new ValidlyFactory(address(protocolFactory), feeTiers[i]);
+        ++i;
+    }
   }
 
-  function _deployStablePair(address tokenA, address tokenB) internal returns (Validly, address) {
-    Validly stablePair = Validly(factory.createPair(address(tokenA), address(tokenB), true));
-    return (stablePair, address(stablePair.pool()));
-  }
-
-  function _deployVolatilePair(address tokenA, address tokenB) internal returns (Validly, address) {
-    Validly volatilePair = Validly(factory.createPair(address(tokenA), address(tokenB), false));
-    return (volatilePair, address(volatilePair.pool()));
+  function _createPair(address tokenA, address tokenB, uint256 feeBips, bool isStable) internal returns (Validly, address) {
+    Validly pair = Validly(validlyFactories[feeBips].createPair(address(tokenA), address(tokenB), isStable));
+    return (pair, address(pair.pool()));
   }
 }
