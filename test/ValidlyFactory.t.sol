@@ -38,7 +38,7 @@ contract ValidlyFactoryTest is Test {
         // Create ValidlyFactory
         uint256[] memory feeTiers = new uint256[](1);
         feeTiers[0] = 1;
-        factory = new ValidlyFactory(address(protocolFactory), feeTiers);
+        factory = new ValidlyFactory(address(protocolFactory), feeTiers, 0);
     }
 
     function test_constructor() public {
@@ -49,7 +49,7 @@ contract ValidlyFactoryTest is Test {
 
         uint256[] memory feeTiers = new uint256[](1);
         feeTiers[0] = 10001;
-        new ValidlyFactory(address(protocolFactory), feeTiers);
+        new ValidlyFactory(address(protocolFactory), feeTiers, 0);
     }
 
     function test_createPair() public {

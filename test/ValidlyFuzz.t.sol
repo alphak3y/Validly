@@ -45,7 +45,7 @@ contract ValidlyFuzzTest is Test {
         // Create ValidlyFactory
         uint256[] memory feeTiers = new uint256[](1);
         feeTiers[0] = 1;
-        factory = new ValidlyFactory(address(protocolFactory), feeTiers);
+        factory = new ValidlyFactory(address(protocolFactory), feeTiers, 0);
 
         // Create volatile and stable pairs
         volatilePair = Validly(factory.createPair(address(token0), address(token1), false, 1));

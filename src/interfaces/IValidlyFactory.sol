@@ -10,12 +10,18 @@ interface IValidlyFactory {
     event FeesClaimed(address indexed pool);
     event PoolCreated(address indexed pool, address indexed token0, address indexed token1, bool isStable, uint16 fee);
     event PoolManagerFeeBipsSet(address indexed pool, uint256 feeBips);
+    event DefaultPoolManagerFeeBipsSet(uint256 feeBips);
     event TokenClaimed(address indexed token, address indexed recipient, uint256 amount);
 
     /**
      *  EXTERNAL FUNCTIONS
      */
-    function protocolFactory() external view returns (IProtocolFactory);
+    function getPoolAddresses(address token0, address token1, bool isStable, uint16 fee)
+        external
+        view
+        returns (address validlyPool, address sovereignPool);
 
     function feeTiers(uint256 fee) external view returns (bool enabled);
+
+    function protocolFactory() external view returns (IProtocolFactory);
 }

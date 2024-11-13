@@ -23,6 +23,7 @@ contract ValidlyFactory is IValidlyFactory {
     error ValidlyFactory__constructor_invalidFeeBips();
     error ValidlyFactory__createPair_alreadyDeployed();
     error ValidlyFactory__setPoolManagerFees_unauthorized();
+    error ValidlyFactory__setDefaultPoolManagerFees_unauthorized();
 
     /**
      *  IMMUTABLES
@@ -49,22 +50,29 @@ contract ValidlyFactory is IValidlyFactory {
     mapping(bytes32 key => address pool) public pools;
 
     /**
+     * @notice Default basis points value for pool protocol fees.
+     */
+    uint256 public defaultPoolManagerFeeBips;
+
+    /**
      *  CONSTRUCTOR
      */
-    constructor(address _protocolFactory, uint256[] memory _feeBips) {
+    constructor(address _protocolFactory, uint256[] memory _feeTiers, uint256 _defaultPoolManagerFeeBips) {
         protocolFactory = IProtocolFactory(_protocolFactory);
 
-        for (uint256 i; i < _feeBips.length;) {
-            if (_feeBips[i] > 10000) {
+        for (uint256 i; i < _feeTiers.length;) {
+            if (_feeTiers[i] > 10000) {
                 revert ValidlyFactory__constructor_invalidFeeBips();
             }
 
-            feeTiers[_feeBips[i]] = true;
+            feeTiers[_feeTiers[i]] = true;
 
             unchecked {
                 i++;
             }
         }
+
+        _setDefaultPoolManagerFeeBips(_defaultPoolManagerFeeBips);
     }
 
     /**
@@ -119,6 +127,8 @@ contract ValidlyFactory is IValidlyFactory {
 
         address pool = protocolFactory.deploySovereignPool(args);
 
+        ISovereignPool(pool).setPoolManagerFeeBips(defaultPoolManagerFeeBips);
+
         Validly validly = new Validly{salt: poolKey}(pool, _isStable);
 
         ISovereignPool(pool).setALM(address(validly));
@@ -146,6 +156,8 @@ contract ValidlyFactory is IValidlyFactory {
 
         address pool = protocolFactory.deploySovereignPool(_args);
 
+        ISovereignPool(pool).setPoolManagerFeeBips(defaultPoolManagerFeeBips);
+
         validly = address(new Validly(pool, _isStable));
 
         ISovereignPool(pool).setALM(address(validly));
@@ -164,6 +176,16 @@ contract ValidlyFactory is IValidlyFactory {
         ISovereignPool(_pool).setPoolManagerFeeBips(_feeBips);
 
         emit PoolManagerFeeBipsSet(_pool, _feeBips);
+    }
+
+    /**
+     * @notice Sets the default pool manager fees for newly created pools.
+     * @dev This function is used to set the default pool manager fees for newly created pools.
+     * @param _feeBips The fee percentage for the pool manager.
+     * @custom:error ValidlyFactory__setDefaultPoolManagerFees_unauthorized Thrown if the caller is not the protocol manager.
+     */
+    function setDefaultPoolManagerFeeBips(uint256 _feeBips) external onlyProtocolManager {
+        _setDefaultPoolManagerFeeBips(_feeBips);
     }
 
     /**
@@ -221,6 +243,12 @@ contract ValidlyFactory is IValidlyFactory {
     /**
      *  PRIVATE FUNCTIONS
      */
+    function _setDefaultPoolManagerFeeBips(uint256 _feeBips) private {
+        defaultPoolManagerFeeBips = _feeBips;
+
+        emit DefaultPoolManagerFeeBipsSet(_feeBips);
+    }
+
     function _poolKey(address token0, address token1, bool isStable, uint16 fee) private pure returns (bytes32 key) {
         key = keccak256(abi.encode(token0, token1, isStable, fee));
     }
