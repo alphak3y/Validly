@@ -22,8 +22,31 @@ contract ValidlyFactory is IValidlyFactory {
     error ValidlyFactory__claimTokens_invalidToken();
     error ValidlyFactory__constructor_invalidFeeBips();
     error ValidlyFactory__createPair_alreadyDeployed();
+    error ValidlyFactory__createPair_invalidFeeBips();
     error ValidlyFactory__setPoolManagerFees_unauthorized();
     error ValidlyFactory__setDefaultPoolManagerFees_unauthorized();
+    error ValidlyFactory__setDefaultPoolManagerFeeBips_excessivePoolManagerFee();
+    error ValidlyFactory___setFeeTierAsEnabled_invalidFeeBips();
+
+    /**
+     *  CONSTANTS
+     */
+
+    /**
+        @notice Maximum swap fee is 50% of input amount. 
+        @dev See docs for a more detailed explanation about how swap fees are applied.
+     */
+    uint256 private constant _MAX_SWAP_FEE_BIPS = 10_000;
+
+    /**
+        @notice Factor of one or 100% representation in Basis points
+     */
+    uint256 private constant _FACTOR_ONE = 10_000;
+
+    /**
+        @notice `poolManager` can collect up to 50% of swap fees.
+     */
+    uint256 private constant _MAX_POOL_MANAGER_FEE_BIPS = 5_000;
 
     /**
      *  IMMUTABLES
@@ -61,11 +84,7 @@ contract ValidlyFactory is IValidlyFactory {
         protocolFactory = IProtocolFactory(_protocolFactory);
 
         for (uint256 i; i < _feeTiers.length;) {
-            if (_feeTiers[i] > 10000) {
-                revert ValidlyFactory__constructor_invalidFeeBips();
-            }
-
-            feeTiers[_feeTiers[i]] = true;
+            _setFeeTierAsEnabled(_feeTiers[i]);
 
             unchecked {
                 i++;
@@ -97,18 +116,22 @@ contract ValidlyFactory is IValidlyFactory {
      * @param _token0 The address of the first token in the pair.
      * @param _token1 The address of the second token in the pair.
      * @param _isStable Boolean indicating if the pool should be stable or volatile.
-     * @param _fee The hundreths of bips to be used for the swap fee.
+     * @param _feeBips The number of basis points to be used for the swap fee.
      * @custom:error ValidlyFactory__createPair_alreadyDeployed Thrown if a pool for the given token pair and stability type already exists.
      * @custom:error ValidlyFactory__createPair_failedDeployment Thrown if the Validly contract deployment fails.
      * @custom:error ValidlyFactory__createPair_invalidFeeBips Thrown if the feeBips is not between 0 and 10000.
      */
-    function createPair(address _token0, address _token1, bool _isStable, uint16 _fee) external returns (address) {
+    function createPair(address _token0, address _token1, bool _isStable, uint16 _feeBips) external returns (address) {
         (_token0, _token1) = _token0 < _token1 ? (_token0, _token1) : (_token1, _token0);
 
-        bytes32 poolKey = _poolKey(_token0, _token1, _isStable, _fee);
+        bytes32 poolKey = _poolKey(_token0, _token1, _isStable, _feeBips);
 
         if (pools[poolKey] != address(0)) {
             revert ValidlyFactory__createPair_alreadyDeployed();
+        }
+
+        if (!feeTiers[_feeBips]) {
+            revert ValidlyFactory__createPair_invalidFeeBips();
         }
 
         SovereignPoolConstructorArgs memory args = SovereignPoolConstructorArgs({
@@ -122,7 +145,7 @@ contract ValidlyFactory is IValidlyFactory {
             isToken1Rebase: false,
             token0AbsErrorTolerance: 0,
             token1AbsErrorTolerance: 0,
-            defaultSwapFeeBips: _fee
+            defaultSwapFeeBips: _feeBips
         });
 
         address pool = protocolFactory.deploySovereignPool(args);
@@ -135,7 +158,7 @@ contract ValidlyFactory is IValidlyFactory {
 
         pools[poolKey] = pool;
 
-        emit PoolCreated(pool, _token0, _token1, _isStable, _fee);
+        emit PoolCreated(pool, _token0, _token1, _isStable, _feeBips);
 
         return address(validly);
     }
@@ -151,8 +174,6 @@ contract ValidlyFactory is IValidlyFactory {
         _args.poolManager = address(this);
         // This factory does not support Sovereign Pools with Verifier Modules
         _args.verifierModule = address(0);
-
-        //TODO: validate fee bips
 
         address pool = protocolFactory.deploySovereignPool(_args);
 
@@ -186,6 +207,16 @@ contract ValidlyFactory is IValidlyFactory {
      */
     function setDefaultPoolManagerFeeBips(uint256 _feeBips) external onlyProtocolManager {
         _setDefaultPoolManagerFeeBips(_feeBips);
+    }
+
+    /**
+     * @notice Enables a fee tier to be usable for pool creation.
+     * @dev This function is used to set as fee tier as enabled for pool creation.
+     * @param _feeBips The fee percentage to enable as a swap fee.
+     * @custom:error ValidlyFactory__setDefaultPoolManagerFees_unauthorized Thrown if the caller is not the protocol manager.
+     */
+    function setFeeTierAsEnabled(uint256 _feeBips) external onlyProtocolManager {
+        _setFeeTierAsEnabled(_feeBips);
     }
 
     /**
@@ -244,12 +275,26 @@ contract ValidlyFactory is IValidlyFactory {
      *  PRIVATE FUNCTIONS
      */
     function _setDefaultPoolManagerFeeBips(uint256 _feeBips) private {
+        if (_feeBips > _MAX_POOL_MANAGER_FEE_BIPS) {
+            revert ValidlyFactory__setDefaultPoolManagerFeeBips_excessivePoolManagerFee();
+        }
+        
         defaultPoolManagerFeeBips = _feeBips;
 
         emit DefaultPoolManagerFeeBipsSet(_feeBips);
     }
 
-    function _poolKey(address token0, address token1, bool isStable, uint16 fee) private pure returns (bytes32 key) {
-        key = keccak256(abi.encode(token0, token1, isStable, fee));
+    function _setFeeTierAsEnabled(uint256 _feeBips) private {
+        if (_feeBips > _MAX_SWAP_FEE_BIPS) {
+            revert ValidlyFactory___setFeeTierAsEnabled_invalidFeeBips();
+        }
+        
+        feeTiers[_feeBips] = true;
+
+        emit FeeTierEnabled(_feeBips);
+    }
+
+    function _poolKey(address token0, address token1, bool isStable, uint16 feeBips) private pure returns (bytes32 key) {
+        key = keccak256(abi.encode(token0, token1, isStable, feeBips));
     }
 }

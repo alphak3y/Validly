@@ -20,8 +20,7 @@ contract Default is DeployValidlyBase {
   function run() external {
     vm.startBroadcast(vm.envUint('PRIVATE_KEY'));
 
-    token0 = new ERC20Mock();
-    token1 = new ERC20Mock();
+    _deployProtocolFactory();
 
     uint256[] memory feeTiers = new uint256[](3);
     
@@ -29,13 +28,18 @@ contract Default is DeployValidlyBase {
     feeTiers[1] = 30;
     feeTiers[2] = 100;
 
-    _deployFactories(feeTiers);
+    uint256 defaultPoolManagerFeeBips = 10;
+
+    _deployValidlyFactory(feeTiers, defaultPoolManagerFeeBips);
+
+    token0 = ERC20Mock(0x060E976B4104960d44B11204221AB98e095DDc93);
+    token1 = ERC20Mock(0xA71D153FBAFb5E94c6716F51E001daF46A93a9eE);
 
     (token0, token1) = address(token0) < address(token1) ? (token0, token1) : (token1, token0);
 
-    (stablePair, stablePool) = _createPair(address(token1), address(token0), 5, true);
-    (volatilePair, volatilePool) = _createPair(address(token0), address(token1), 30, false);
-    (exoticPair, exoticPool) = _createPair(address(token0), address(token1), 100, false);
+    (stablePair, stablePool) = _createPair(address(token1), address(token0), true, 5);
+    (volatilePair, volatilePool) = _createPair(address(token0), address(token1), false, 30);
+    (exoticPair, exoticPool) = _createPair(address(token0), address(token1), false, 100);
 
     vm.stopBroadcast();
   }

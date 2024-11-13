@@ -15,12 +15,11 @@ import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 abstract contract DeployValidlyBase is Script {
   using stdJson for string;
 
-  mapping(uint256 feeBips => ValidlyFactory factory) validlyFactories;
   ProtocolFactory protocolFactory;
   SovereignPoolFactory poolFactory;
   ValidlyFactory validlyFactory;
 
-  function _deployProtocolFactories() public {
+  function _deployProtocolFactory() public {
     protocolFactory = new ProtocolFactory(vm.envAddress('SENDER'));
 
     poolFactory = new SovereignPoolFactory();
@@ -28,12 +27,12 @@ abstract contract DeployValidlyBase is Script {
     protocolFactory.setSovereignPoolFactory(address(poolFactory));
   }
 
-  function _deployValidlyFactory(uint256[] memory feeTiers) public {
-    validlyFactory = new ValidlyFactory(address(protocolFactory), feeTiers);
+  function _deployValidlyFactory(uint256[] memory feeTiers, uint256 defaultPoolManagerFeeBips) public {
+    validlyFactory = new ValidlyFactory(address(protocolFactory), feeTiers, defaultPoolManagerFeeBips);
   }
 
   function _createPair(address tokenA, address tokenB, bool isStable, uint16 feeBips) internal returns (Validly, address) {
-    Validly pair = Validly(validlyFactories[feeBips].createPair(address(tokenA), address(tokenB), isStable, feeBips));
+    Validly pair = Validly(validlyFactory.createPair(address(tokenA), address(tokenB), isStable, feeBips));
     return (pair, address(pair.pool()));
   }
 

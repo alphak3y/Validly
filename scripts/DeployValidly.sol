@@ -8,13 +8,17 @@ contract Default is DeployValidlyBase {
   function run() external {
     vm.startBroadcast(vm.envUint('PRIVATE_KEY'));
 
+    _deployProtocolFactory();
+
     uint256[] memory feeTiers = new uint256[](3);
     
     feeTiers[0] = 5;
     feeTiers[1] = 30;
     feeTiers[2] = 100;
 
-    _deployFactories(feeTiers);
+    uint256 defaultPoolManagerFeeBips = 0;
+
+    _deployValidlyFactory(feeTiers, defaultPoolManagerFeeBips);
 
     vm.stopBroadcast();
   }
