@@ -8,6 +8,7 @@ import {SovereignPoolConstructorArgs} from "@valantis-core/pools/structs/Soverei
 import {ISovereignPool} from "@valantis-core/pools/interfaces/ISovereignPool.sol";
 
 import {Validly} from "./Validly.sol";
+import {IValidly} from "./interfaces/IValidly.sol";
 import {IValidlyFactory} from "./interfaces/IValidlyFactory.sol";
 
 contract ValidlyFactory is IValidlyFactory {
@@ -34,15 +35,13 @@ contract ValidlyFactory is IValidlyFactory {
     IProtocolFactory public immutable protocolFactory;
 
     /**
-     * @notice The fee percentage for the Validly pool.
-     * @dev This is set in the constructor and cannot be changed.
-     * @dev If new pool fee tiers are required, one can deploy new Validly factories.
-     */
-    uint256 public immutable feeBips;
-
-    /**
      *  STORAGE
      */
+
+    /**
+     * @notice Mapping from fee hundreth of basis points to an enabled flag.
+     */
+    mapping(uint256 fee => bool enabled) public feeTiers;
 
     /**
      * @notice Mapping from pool keys to pool addresses.
@@ -52,14 +51,20 @@ contract ValidlyFactory is IValidlyFactory {
     /**
      *  CONSTRUCTOR
      */
-    constructor(address _protocolFactory, uint256 _feeBips) {
+    constructor(address _protocolFactory, uint256[] memory _feeBips) {
         protocolFactory = IProtocolFactory(_protocolFactory);
 
-        if (_feeBips == 0 || _feeBips > 10000) {
-            revert ValidlyFactory__constructor_invalidFeeBips();
-        }
+        for (uint256 i; i < _feeBips.length;) {
+            if (_feeBips[i] > 10000) {
+                revert ValidlyFactory__constructor_invalidFeeBips();
+            }
 
-        feeBips = _feeBips;
+            feeTiers[_feeBips[i]] = true;
+
+            unchecked {
+                i++;
+            }
+        }
     }
 
     /**
@@ -84,32 +89,33 @@ contract ValidlyFactory is IValidlyFactory {
      * @param _token0 The address of the first token in the pair.
      * @param _token1 The address of the second token in the pair.
      * @param _isStable Boolean indicating if the pool should be stable or volatile.
+     * @param _fee The hundreths of bips to be used for the swap fee.
      * @custom:error ValidlyFactory__createPair_alreadyDeployed Thrown if a pool for the given token pair and stability type already exists.
      * @custom:error ValidlyFactory__createPair_failedDeployment Thrown if the Validly contract deployment fails.
      * @custom:error ValidlyFactory__createPair_invalidFeeBips Thrown if the feeBips is not between 0 and 10000.
      */
-    function createPair(address _token0, address _token1, bool _isStable) external returns (address) {
+    function createPair(address _token0, address _token1, bool _isStable, uint16 _fee) external returns (address) {
         (_token0, _token1) = _token0 < _token1 ? (_token0, _token1) : (_token1, _token0);
 
-        bytes32 poolKey = _poolKey(_token0, _token1, _isStable);
+        bytes32 poolKey = _poolKey(_token0, _token1, _isStable, _fee);
 
         if (pools[poolKey] != address(0)) {
             revert ValidlyFactory__createPair_alreadyDeployed();
         }
 
-        SovereignPoolConstructorArgs memory args = SovereignPoolConstructorArgs(
-            _token0,
-            _token1,
-            address(protocolFactory),
-            address(this),
-            address(0),
-            address(0),
-            false,
-            false,
-            0,
-            0,
-            feeBips
-        );
+        SovereignPoolConstructorArgs memory args = SovereignPoolConstructorArgs({
+            token0: _token0,
+            token1: _token1,
+            protocolFactory: address(protocolFactory),
+            poolManager: address(this),
+            sovereignVault: address(0),
+            verifierModule: address(0),
+            isToken0Rebase: false,
+            isToken1Rebase: false,
+            token0AbsErrorTolerance: 0,
+            token1AbsErrorTolerance: 0,
+            defaultSwapFeeBips: _fee
+        });
 
         address pool = protocolFactory.deploySovereignPool(args);
 
@@ -119,7 +125,7 @@ contract ValidlyFactory is IValidlyFactory {
 
         pools[poolKey] = pool;
 
-        emit PoolCreated(pool, _token0, _token1, _isStable);
+        emit PoolCreated(pool, _token0, _token1, _isStable, _fee);
 
         return address(validly);
     }
@@ -136,13 +142,15 @@ contract ValidlyFactory is IValidlyFactory {
         // This factory does not support Sovereign Pools with Verifier Modules
         _args.verifierModule = address(0);
 
+        //TODO: validate fee bips
+
         address pool = protocolFactory.deploySovereignPool(_args);
 
         validly = address(new Validly(pool, _isStable));
 
         ISovereignPool(pool).setALM(address(validly));
 
-        emit PoolCreated(pool, _args.token0, _args.token1, _isStable);
+        emit PoolCreated(pool, _args.token0, _args.token1, _isStable, uint16(_args.defaultSwapFeeBips));
     }
 
     /**
@@ -196,9 +204,24 @@ contract ValidlyFactory is IValidlyFactory {
     }
 
     /**
+     * @notice Gets the Sovereign Pool address for a given pair.
+     * @dev This function is used to return the Validly and SovereignPool addresses for a given pair.
+     * @return validlyPool The address of the Validly Pool of the pair to deposit/withdraw liquidity.
+     * @return sovereignPool The address of the Sovereign Pool of the pair to swap liquidity.
+     */
+    function getPoolAddresses(address token0, address token1, bool isStable, uint16 fee)
+        external
+        view
+        returns (address validlyPool, address sovereignPool)
+    {
+        validlyPool = pools[_poolKey(token0, token1, isStable, fee)];
+        sovereignPool = address(IValidly(validlyPool).pool());
+    }
+
+    /**
      *  PRIVATE FUNCTIONS
      */
-    function _poolKey(address token0, address token1, bool isStable) private pure returns (bytes32 key) {
-        key = keccak256(abi.encode(token0, token1, isStable));
+    function _poolKey(address token0, address token1, bool isStable, uint16 fee) private pure returns (bytes32 key) {
+        key = keccak256(abi.encode(token0, token1, isStable, fee));
     }
 }

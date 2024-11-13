@@ -10,7 +10,7 @@ contract Default is DeployValidlyBase {
 
     uint256[] memory feeTiers = new uint256[](3);
     
-    feeTiers[0] = 10;
+    feeTiers[0] = 5;
     feeTiers[1] = 30;
     feeTiers[2] = 100;
 

@@ -36,24 +36,28 @@ contract ValidlyFactoryTest is Test {
         protocolFactory.setSovereignPoolFactory(address(poolFactory));
 
         // Create ValidlyFactory
-        factory = new ValidlyFactory(address(protocolFactory), 1);
+        uint256[] memory feeTiers = new uint256[](1);
+        feeTiers[0] = 1;
+        factory = new ValidlyFactory(address(protocolFactory), feeTiers);
     }
 
     function test_constructor() public {
         assertEq(address(factory.protocolFactory()), address(protocolFactory));
-        assertEq(factory.feeBips(), 1);
+        assertEq(factory.feeTiers(1), true);
 
         vm.expectRevert(ValidlyFactory.ValidlyFactory__constructor_invalidFeeBips.selector);
 
-        new ValidlyFactory(address(protocolFactory), 10001);
+        uint256[] memory feeTiers = new uint256[](1);
+        feeTiers[0] = 10001;
+        new ValidlyFactory(address(protocolFactory), feeTiers);
     }
 
     function test_createPair() public {
-        factory.createPair(address(token0), address(token1), true);
+        factory.createPair(address(token0), address(token1), true, 1);
 
         vm.expectRevert(ValidlyFactory.ValidlyFactory__createPair_alreadyDeployed.selector);
 
-        factory.createPair(address(token0), address(token1), true);
+        factory.createPair(address(token0), address(token1), true, 1);
     }
 
     function test_createPool() public {

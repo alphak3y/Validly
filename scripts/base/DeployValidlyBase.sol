@@ -10,6 +10,7 @@ import {SovereignPool} from "@valantis-core/pools/SovereignPool.sol";
 import {ProtocolFactory} from "@valantis-core/protocol-factory/ProtocolFactory.sol";
 import {Validly} from "src/Validly.sol";
 import {ValidlyFactory} from "src/ValidlyFactory.sol";
+import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 
 abstract contract DeployValidlyBase is Script {
   using stdJson for string;
@@ -17,23 +18,42 @@ abstract contract DeployValidlyBase is Script {
   mapping(uint256 feeBips => ValidlyFactory factory) validlyFactories;
   ProtocolFactory protocolFactory;
   SovereignPoolFactory poolFactory;
+  ValidlyFactory validlyFactory;
 
-  function _deployFactories(uint256[] memory feeTiers) public {
+  function _deployProtocolFactories() public {
     protocolFactory = new ProtocolFactory(vm.envAddress('SENDER'));
 
     poolFactory = new SovereignPoolFactory();
 
     protocolFactory.setSovereignPoolFactory(address(poolFactory));
-
-    // create a factory for each fee tier
-    for (uint256 i = 0; i < feeTiers.length; ) {
-        validlyFactories[feeTiers[i]] = new ValidlyFactory(address(protocolFactory), feeTiers[i]);
-        ++i;
-    }
   }
 
-  function _createPair(address tokenA, address tokenB, uint256 feeBips, bool isStable) internal returns (Validly, address) {
-    Validly pair = Validly(validlyFactories[feeBips].createPair(address(tokenA), address(tokenB), isStable));
+  function _deployValidlyFactory(uint256[] memory feeTiers) public {
+    validlyFactory = new ValidlyFactory(address(protocolFactory), feeTiers);
+  }
+
+  function _createPair(address tokenA, address tokenB, bool isStable, uint16 feeBips) internal returns (Validly, address) {
+    Validly pair = Validly(validlyFactories[feeBips].createPair(address(tokenA), address(tokenB), isStable, feeBips));
     return (pair, address(pair.pool()));
+  }
+
+  function _faucetTokens(
+    address[] memory tokens,
+    uint256[] memory amounts,
+    address[] memory recipients
+  ) 
+    internal
+  {
+    for (uint i; i < recipients.length; ){
+      for (uint j; j < tokens.length; ){
+        ERC20Mock(tokens[j]).mint(recipients[i], amounts[j]);
+        unchecked {
+          j++;
+        }
+      }
+      unchecked {
+        i++;
+      }
+    }
   }
 }

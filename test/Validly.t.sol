@@ -35,11 +35,13 @@ contract ValidlyTest is Test {
         protocolFactory.setSovereignPoolFactory(address(poolFactory));
 
         // Create ValidlyFactory
-        factory = new ValidlyFactory(address(protocolFactory), 1);
+        uint256[] memory feeTiers = new uint256[](1);
+        feeTiers[0] = 1;
+        factory = new ValidlyFactory(address(protocolFactory), feeTiers);
 
         // Create volatile and stable pairs
-        volatilePair = Validly(factory.createPair(address(token0), address(token1), false));
-        stablePair = Validly(factory.createPair(address(token1), address(token0), true));
+        volatilePair = Validly(factory.createPair(address(token0), address(token1), false, 1));
+        stablePair = Validly(factory.createPair(address(token1), address(token0), true, 1));
 
         volatilePool = volatilePair.pool();
         stablePool = stablePair.pool();

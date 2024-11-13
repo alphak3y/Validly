@@ -25,7 +25,7 @@ contract Default is DeployValidlyBase {
 
     uint256[] memory feeTiers = new uint256[](3);
     
-    feeTiers[0] = 10;
+    feeTiers[0] = 5;
     feeTiers[1] = 30;
     feeTiers[2] = 100;
 
@@ -33,7 +33,7 @@ contract Default is DeployValidlyBase {
 
     (token0, token1) = address(token0) < address(token1) ? (token0, token1) : (token1, token0);
 
-    (stablePair, stablePool) = _createPair(address(token1), address(token0), 10, true);
+    (stablePair, stablePool) = _createPair(address(token1), address(token0), 5, true);
     (volatilePair, volatilePool) = _createPair(address(token0), address(token1), 30, false);
     (exoticPair, exoticPool) = _createPair(address(token0), address(token1), 100, false);
 
